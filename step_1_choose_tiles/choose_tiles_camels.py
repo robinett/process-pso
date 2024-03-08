@@ -139,6 +139,7 @@ class choose:
         print(intersection_info)
         # sort the list of catchment pixels in ascending order
         all_intersecting = np.sort(all_intersecting)
+        really_chosen_tiles_shapes = tile_gdf.loc[all_intersecting]
         # make sure this list in unique--don't run a tile twice if it
         # intersects multiple watershed
         # should have taken care of this in the newest version of the code but
@@ -150,7 +151,8 @@ class choose:
         camels_final.index.name = 'camel'
         return [
             intersection_info,all_intersecting,tile_gdf,
-            camels_final,camels_bounds
+            camels_final,camels_bounds,
+            really_chosen_tiles_shapes
         ]
     def save_dictionary(self,dictionary,save_name):
         print('saving dictionary to {}'.format(save_name))

@@ -35,8 +35,8 @@ def main():
         '/shared/pso/step_1_choose_tiles/data/tile_coord.csv'
     )
     # dates to start and end, inclusive
-    start_date = datetime.date(2006,1,1)
-    end_date = datetime.date(2006,12,31)
+    start_date = datetime.date(2003,1,1)
+    end_date = datetime.date(2014,12,31)
     # example fname for fluxcom. if changed, shoudl be in same format where date can be
     #   changed via fname.format()
     example_fluxcom_fname = os.path.join(
@@ -71,7 +71,7 @@ def main():
         # will get weights for all tiles
         # will create truth datasets both for all tiles and for only selected tiles
     # choose what to recreate, load, and be saved
-    load_weights = True
+    load_weights = False
     save_weights = False
     load_truth = False
     save_all_truth = True

@@ -31,7 +31,7 @@ def main():
     )
     # what are the start and end dates?
     start = datetime.date(2006,1,1)
-    end = datetime.date(2006,12,31)
+    end = datetime.date(2007,12,31)
     # let's start the analysis
     c = camels(start,end)
     chosen_camels_df = c.get_camels(chosen_camels_fname)

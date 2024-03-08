@@ -43,20 +43,23 @@ def main():
     )
     # the directory for comparison run
     default_experiment = (
-        '/lustre/catchment/exps/GEOSldas_CN45_med_default_2006_camels/0'
+        '/lustre/catchment/exps/GEOSldas_CN45_med_default_pft_g1_2000_2014_camels/0'
     )
     # the directory for the first iteration of the PSO run
     first_iteration_experiment = (
-        '/shared/pso_outputs/g1_a0_a1_strm_camels_2006/num_1/7'
+        '/shared/pso_outputs/g1_a0_a1_et_camels_spin2006_test2007_v2/num_1/4'
     )
     # the directory for the final iteration of the PSO run
     final_iteration_experiment = (
-        '/shared/pso_outputs/g1_a0_a1_strm_camels_2006/num_5/8'
+        '/shared/pso_outputs/g1_a0_a1_et_camels_spin2006_test2007_v2/num_17/9'
     )
     # set the start date and end date for our period of interest
     # start date and ned date are inclusive
-    start = datetime.date(2006,1,1)
-    end = datetime.date(2006,12,31)
+    start = datetime.date(2000,1,1)
+    end = datetime.date(2014,12,31)
+    # start and end dates for when to compute eror statistics
+    start_error = datetime.date(2003,1,1)
+    end_error = datetime.date(2014,12,31)
     # let's set the experiments that we need to load
     # the name, dir, load_bools, and save_bools below are all lists where each
     # element of that list corresponds to:
@@ -65,13 +68,13 @@ def main():
         # 2: the final iteration of the PSO run
     # what are the experiment names to use
     exp_names = [
-        'med-camels-2006',
-        'g1-a0-a1-strm-camels-first-2006',
-        'g1-a0-a1-strm-camels-num5-2006'
+        'med-mbb-default-pft-g1-2000-2014',
+        'med-mbb-default-pft-g1-2000-2014',
+        'med-mbb-default-pft-g1-2000-2014'
     ]
     # location of the all_info.pkl file containing pso information
     all_info_fname = (
-        '/shared/pso_outputs/g1_a0_a1_strm_camels_2006/all_info.pkl'
+        '/shared/pso_outputs/g1_a0_a1_et_camels_spin2006_test2007_v2/all_info.pkl'
     )
     # what are the directories where these experiments exist
     exp_dirs = [
@@ -85,14 +88,12 @@ def main():
     read_met_forcing = [False,False,False]
     # if raw model outputs have already been processed, 
     # should processed data be loaded instead?
-    load_bools = [False,False,False]
+    load_bools =  [False,True,True]
     # if generating a new timeseries, should it be saved?
-    save_bools = [True,True,True]
+    save_bools = [True,False,False]
     # default experiment must be filled in as a real directory the other
     # two must be fake and the experiments must be pre-saved as .pkl files
-    default_experiment_compare = (
-        '/lustre/catchment/exps/GEOSldas_CN45_med_2006_2006_v3/0'
-    )
+    default_experiment_compare = default_experiment
     # the directory for the first iteration of the PSO run
     first_iteration_experiment_compare = 'fake'
     # the directory for the final iteration of the PSO run
@@ -102,26 +103,30 @@ def main():
         final_iteration_experiment_compare
     ]
     exp_names_compare = [
-        'med-2002-2002',
-        'g1-ai-et-strm-first-2002-2002',
-        'g1-ai-et-strm-final-2002-2002'
+        'med-mbb-default-pft-g1',
+        'g1-ai-et-camels-v3-spin2006-test2007-first',
+        'g1-ai-et-camels-v3-spin2006-test2007-final'
     ]
     save_bools_compare = [False,False,False]
     load_bools_compare = [True,True,True]
     is_default_experiment_compare = [True,False,False]
     read_met_forcing_compare = [False,False,False]
+    # what is the all info for this comparison experiment?
+    comparison_all_info_fname = (
+        '/shared/pso_outputs/g1_ai_et_camels_spin2006_test2007_v3/all_info.pkl'
+    )
     # is this a pso experiment? obviously, yes it is
     experiment_type = 'pso'
     # where is the fluxcom data located?
     fluxcom_dir = (
         '/shared/pso/step_3_process_fluxcom/outputs/' +
         'le_truth_fluxcom_rs_CRUNCEP_ensemble_watts_per_m2_' +
-        '2006-01-01_2006-12-31_camels_tiles.csv'
+        '2006-01-01_2007-12-31_camels_tiles.csv'
     )
     # where is the streamflow data located?
     strm_dir = (
         '/shared/pso/step_3.1.1_process_camels/outputs/' +
-        'camels_truth_2006-01-01_2006-12-31_mm_day.csv'
+        'camels_truth_2006-01-01_2007-12-31_mm_day.csv'
     )
     # where is the dictionary containing information about which tiles
     # intersected which hucs?
@@ -152,6 +157,30 @@ def main():
         env_covariate_base_dir,
         'averaged_ksat.nc4'
     )
+    # where are the error comparison maps located?
+    error_comparisons_dir = (
+        '/shared/pso/other_analyses/errors_vs_covariates/outputs'
+    )
+    # where is the gldas precip located?
+    gldas_precip_dir = os.path.join(
+        error_comparisons_dir,
+        'gldas_precip_kg_m2_s.csv'
+    )
+    # where is the gldas temp loated?
+    gldas_temp_dir = os.path.join(
+        error_comparisons_dir,
+        'gldas_air_temp_K.csv'
+    )
+    # where is the gldas potential ET located?
+    gldas_pet_dir = os.path.join(
+        error_comparisons_dir,
+        'gldas_potential_et_W_m2.csv'
+    )
+    # where is the canopy height located?
+    canopy_height_dir = os.path.join(
+        error_comparisons_dir,
+        'canopy_height.csv'
+    )
     # where is the geojson file with the information for the huc6 located?
     geojson_fname = (
         '/shared/pso/step_1_choose_tiles/outputs/chosen_camels.geojson'
@@ -175,14 +204,23 @@ def main():
         out_dir,
         'is_drought_df.csv'
     )
+    # where is the geodataframe with tile information stored?
+    tile_gdf_fname = (
+        '/shared/pso/step_1_choose_tiles/outputs/really_chosen_tiles.geojson'
+    )
+    # what should we save pixel-scale error metric gdf as?
+    pixel_error_gdf_fname = os.path.join(
+        out_dir,'pixel_error.gdf'
+    )
+    # what is the name to save the pixel-scale error dict?
     # what analysis sections do we want to run?
-    run_pix_analysis = False
+    run_pix_analysis = True
     plot_pix_analysis = False
-    run_watershed_analysis = False
+    run_watershed_analysis = True
     plot_watershed_analysis = False
     # must run both pix analysis and watershed analysis for pso analysis to
     # work correctly
-    run_pso_analysis = False
+    run_pso_analysis = True
     compare_multiple_experiments = False
     analyze_during_drought = False
     plot_spei = False
@@ -221,10 +259,11 @@ def main():
         # get the rmse dicts for pixel/daily scale
         print('getting rmse dicts for daily pixel scale')
         default_df_pix,pso_df_pix,fluxcom_df = a_pix.get_rmse_dict(
-            exp_names,catch_timeseries,fluxcom_timeseries,experiment_type
+            exp_names,catch_timeseries,fluxcom_timeseries,experiment_type,
+            start_error,end_error
         )
         if plot_pix_analysis:
-            # plot a map of LE timeseries and their changes
+            # plot LE timeseries and their changes
             #a_pix.plot_le_timeseries(
             #    exp_names,catch_timeseries,fluxcom_timeseries,plots_dir
             #)
@@ -243,16 +282,16 @@ def main():
         # let's just plot some general comparisons
         default_df_general = a_pix.get_rmse_dict(
             exp_names[0],catch_timeseries[exp_names[0]],fluxcom_timeseries,
-            'general'
+            'general',start_error,end_error
         )
         pso_df_general = a_pix.get_rmse_dict(
             exp_names[2],catch_timeseries[exp_names[2]],fluxcom_timeseries,
-            'general'
+            'general',start_error,end_error
         )
         if plot_pix_analysis:
             a_pix.plot_general_comparison_maps(
                 [exp_names[0],exp_names[2]],default_df_general,pso_df_general,
-                plots_dir
+                plots_dir,tile_gdf_fname,pixel_error_gdf_fname
             )
 
     # initiate a class of analyze for watershed/monthly scale
@@ -274,7 +313,8 @@ def main():
         all_tiles = a_water.get_tiles(step_1_pixels_fname)
         print('getting watershed scale rmse dicts')
         returned_rmse_dfs = a_water.get_rmse_dict(
-            wat_scale_outs,lai_map_fname,intersection_info,all_tiles
+            wat_scale_outs,lai_map_fname,intersection_info,all_tiles,
+            start_error,end_error
         )
         # extract the different rmse dfs that were returned
         # information for the return rmse list:
@@ -284,10 +324,14 @@ def main():
             # waterwatch_df = returned_rmse[3]
         # plot maps for watershed-scale outputs
         #print('plotting maps for watershed scale outputs')
-        a_water.plot_maps(
-            returned_rmse_dfs,plots_dir,geojson_fname,exp_names,
-            states_shp_fname,plot_watershed_analysis,skinny_plot
-        )
+        if plot_watershed_analysis:
+            a_water.plot_water_metrics(
+                wat_scale_outs,plots_dir
+            )
+            #a_water.plot_maps(
+            #    returned_rmse_dfs,plots_dir,geojson_fname,exp_names,
+            #    states_shp_fname,plot_watershed_analysis,skinny_plot
+            #)
     if run_pso_analysis:
         if not run_pix_analysis or not run_watershed_analysis:
             print('you must run both pixel analysis and watershed analysis')
@@ -297,14 +341,24 @@ def main():
         pso = analyze_pso()
         pso_parameter_names = pso.get_parameter_names()
         pso_all_info = pso.get_all_info(all_info_fname)
+        if compare_multiple_experiments:
+            comparison_all_info = pso.get_all_info(comparison_all_info_fname)
         pso.plot_parameter_convergence(
             pso_all_info,pso_parameter_names,plots_dir,exp_names
         )
-        pso.plot_parameter_maps(
-            pso_all_info,pixels,precip_map_fname,lai_map_fname,
-            sand_map_fname,k0_map_fname,
-            pft_info,default_df_pix,plots_dir,exp_names
-        )
+        if not compare_multiple_experiments:
+            pso.plot_parameter_maps(
+                pso_all_info,pixels,precip_map_fname,lai_map_fname,
+                sand_map_fname,k0_map_fname,
+                pft_info,default_df_pix,plots_dir,exp_names
+            )
+        else:
+            pso.plot_parameter_maps(
+                pso_all_info,pixels,precip_map_fname,lai_map_fname,
+                sand_map_fname,k0_map_fname,
+                pft_info,default_df_pix,plots_dir,exp_names,
+                comparison_all_info
+            )
     if compare_multiple_experiments:
         print('comparing to the second experiment')
         # thing to fill in for this compare multiple experiments section
@@ -325,7 +379,7 @@ def main():
         print('getting rmse dicts for daily pixel scale')
         default_df_pix_compare,pso_df_pix_compare,fluxcom_df_compare = a_pix.get_rmse_dict(
             exp_names_compare,catch_timeseries_compare,fluxcom_timeseries,
-            experiment_type
+            experiment_type,start_error,end_error
         )
         a_water = analyze_watershed()
         # get the intersection info so that we know which pixels correspond to
@@ -340,7 +394,8 @@ def main():
         all_tiles = a_water.get_tiles(step_1_pixels_fname)
         print('getting watershed scale rmse dicts')
         returned_rmse_dfs_compare = a_water.get_rmse_dict(
-            wat_scale_outs_compare,lai_map_fname,intersection_info,all_tiles
+            wat_scale_outs_compare,lai_map_fname,intersection_info,all_tiles,
+            start_error,end_error
         )
         a_water.plot_maps(
             returned_rmse_dfs_compare,plots_dir,geojson_fname,exp_names_compare,

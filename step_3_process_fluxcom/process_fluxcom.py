@@ -111,7 +111,6 @@ class process:
             fluxcom_lat_lower = fluxcom_lat[:,0]
             center_lon = np.array(fluxcom['lon'])
             center_lat = np.array(fluxcom['lat'])
-
             # get the tile coords from catchment
             catch_tile_info = pd.read_csv(
                 catch_tile_info_fname

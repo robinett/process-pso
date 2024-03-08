@@ -37,6 +37,7 @@ class analyze_watershed:
     def get_model_preds_watershed(self,start,end,exp_names,catch_timeseries,
                                   streamflow_timeseries,
                                   fluxcom_timeseries,intersection_info,
+                                  start_err,end_err,
                                   get_metf=False):
         '''
         function that gets RMSE dict at the monthly/watershed level
@@ -60,22 +61,22 @@ class analyze_watershed:
         # get the information that we need and create the arrays that will hold
         # the final watershed information
         num_watersheds = len(watersheds)
-        delta = relativedelta.relativedelta(
-            end+datetime.timedelta(days=1),start
-        )
-        num_months = delta.years*12 + delta.months
+        delta = end - start
+        num_days = delta.days + 1
+        delta_err = end_err - start_err
+        num_days_err = delta_err.days + 1
         # placeholders for everything that we need to extract and convert
-        default_all_strm = np.zeros((num_months,num_watersheds))
-        default_all_le = np.zeros((num_months,num_watersheds))
-        default_all_runoff = np.zeros((num_months,num_watersheds))
-        default_all_baseflow = np.zeros((num_months,num_watersheds))
-        fluxcom_all_le = np.zeros((num_months,num_watersheds))
-        pso_init_all_strm = np.zeros((num_months,num_watersheds))
-        pso_init_all_le = np.zeros((num_months,num_watersheds))
-        pso_final_all_strm = np.zeros((num_months,num_watersheds))
-        pso_final_all_le = np.zeros((num_months,num_watersheds))
+        default_all_strm = np.zeros((num_days,num_watersheds))
+        default_all_le = np.zeros((num_days,num_watersheds))
+        default_all_runoff = np.zeros((num_days,num_watersheds))
+        default_all_baseflow = np.zeros((num_days,num_watersheds))
+        fluxcom_all_le = np.zeros((num_days_err,num_watersheds))
+        pso_init_all_strm = np.zeros((num_days,num_watersheds))
+        pso_init_all_le = np.zeros((num_days,num_watersheds))
+        pso_final_all_strm = np.zeros((num_days,num_watersheds))
+        pso_final_all_le = np.zeros((num_days,num_watersheds))
         if get_metf:
-            default_all_rainfsnowf = np.zeros((num_months,num_watersheds))
+            default_all_rainfsnowf = np.zeros((num_days,num_watersheds))
         for w,wat in enumerate(watersheds):
             # get the waterwatch streamflow for this watershed
             this_strm_data = streamflow_timeseries[str(wat)]
@@ -134,219 +135,71 @@ class analyze_watershed:
             pso_final_strm = pso_final_strm*86400 # now in kg/m2/day
             if get_metf:
                 default_rainfsnowf = default_rainfsnowf*86400 # now in kg/m2/day
-            # and one kg/m2 is equal to 1mm of water
-            # so now we are good
-            # and average to monthly temporal resolution
-            # create the monthly resolution dataframe
-            cols = list(this_tiles)
-            cols.append('date')
-            # for default
-            default_strm_mon = pd.DataFrame(columns=cols)
-            default_strm_mon = default_strm_mon.set_index('date')
-            default_runoff_mon = pd.DataFrame(columns=cols)
-            default_runoff_mon = default_runoff_mon.set_index('date')
-            default_baseflow_mon = pd.DataFrame(columns=cols)
-            default_baseflow_mon = default_baseflow_mon.set_index('date')
-            default_le_mon = pd.DataFrame(columns=cols)
-            default_le_mon = default_le_mon.set_index('date')
-            # for default met forcing variables
-            if get_metf:
-                # total incoming precip
-                default_rainfsnowf_mon = pd.DataFrame(columns=cols)
-                default_rainfsnowf_mon = default_rainfsnowf_mon.set_index('date')
-            # for pso init
-            pso_init_strm_mon = pd.DataFrame(columns=cols)
-            pso_init_strm_mon = pso_init_strm_mon.set_index('date')
-            pso_init_le_mon = pd.DataFrame(columns=cols)
-            pso_init_le_mon = pso_init_le_mon.set_index('date')
-            # for pso final
-            pso_final_strm_mon = pd.DataFrame(columns=cols)
-            pso_final_strm_mon = pso_final_strm_mon.set_index('date')
-            pso_final_le_mon = pd.DataFrame(columns=cols)
-            pso_final_le_mon = pso_final_le_mon.set_index('date')
-            # for fluxcom
-            fluxcom_le_mon = pd.DataFrame(columns=cols)
-            fluxcom_le_mon = fluxcom_le_mon.set_index('date')
-            curr = copy.deepcopy(start)
-            first_day = curr.strftime('%Y-%m-%d')
-            last_month = curr.strftime('%m')
-            while curr <= (end + datetime.timedelta(days=1)):
-                this_date_fmt = curr.strftime('%Y-%m-%d')
-                this_month = curr.strftime('%m')
-                if this_month != last_month:
-                    last_day = curr + datetime.timedelta(days=-1)
-                    last_day_str = last_day.strftime('%Y-%m-%d')
-                    # for default stream data
-                    this_month_default_strm_data = default_strm.loc[
-                        first_day:last_day_str
-                    ]
-                    this_month_default_strm_data_avg = this_month_default_strm_data.sum()
-                    default_strm_mon.loc[last_day.strftime('%Y%m')] = (
-                        this_month_default_strm_data_avg
-                    )
-                    # for default runoff
-                    this_month_default_runoff_data = default_runoff.loc[
-                        first_day:last_day_str
-                    ]
-                    this_month_default_runoff_data_avg = this_month_default_runoff_data.sum()
-                    default_runoff_mon.loc[last_day.strftime('%Y%m')] = (
-                        this_month_default_runoff_data_avg
-                    )
-                    # for default baseflow
-                    this_month_default_baseflow_data = default_baseflow.loc[
-                        first_day:last_day_str
-                    ]
-                    this_month_default_baseflow_data_avg = this_month_default_baseflow_data.sum()
-                    default_baseflow_mon.loc[last_day.strftime('%Y%m')] = (
-                        this_month_default_baseflow_data_avg
-                    )
-                    # for default le data
-                    this_month_default_le_data = default_le.loc[
-                        first_day:last_day_str
-                    ]
-                    this_month_default_le_data_avg = (
-                        this_month_default_le_data.mean()
-                    )
-                    default_le_mon.loc[last_day.strftime('%Y%m')] = (
-                        this_month_default_le_data_avg
-                    )
-                    # for default met force
-                    if get_metf:
-                        this_month_default_rainfsnowf_data = default_rainfsnowf.loc[
-                            first_day:last_day_str
-                        ]
-                        this_month_default_rainfsnowf_avg = (
-                            this_month_default_rainfsnowf_data.sum()
-                        )
-                        default_rainfsnowf_mon.loc[last_day.strftime('%Y%m')] = (
-                            this_month_default_rainfsnowf_avg
-                        )
-                    # for pso_init stream data
-                    this_month_pso_init_strm_data = pso_init_strm.loc[
-                        first_day:last_day_str
-                    ]
-                    this_month_pso_init_strm_data_avg = this_month_pso_init_strm_data.sum()
-                    pso_init_strm_mon.loc[last_day.strftime('%Y%m')] = (
-                        this_month_pso_init_strm_data_avg
-                    )
-                    # for pso_init le data
-                    this_month_pso_init_le_data = pso_init_le.loc[
-                        first_day:last_day_str
-                    ]
-                    this_month_pso_init_le_data_avg = (
-                        this_month_pso_init_le_data.mean()
-                    )
-                    pso_init_le_mon.loc[last_day.strftime('%Y%m')] = (
-                        this_month_pso_init_le_data_avg
-                    )
-                    # for pso_final stream data
-                    this_month_pso_final_strm_data = pso_final_strm.loc[
-                        first_day:last_day_str
-                    ]
-                    this_month_pso_final_strm_data_avg = this_month_pso_final_strm_data.sum()
-                    pso_final_strm_mon.loc[last_day.strftime('%Y%m')] = (
-                        this_month_pso_final_strm_data_avg
-                    )
-                    # for pso_final le data
-                    this_month_pso_final_le_data = pso_final_le.loc[
-                        first_day:last_day_str
-                    ]
-                    this_month_pso_final_le_data_avg = (
-                        this_month_pso_final_le_data.mean()
-                    )
-                    pso_final_le_mon.loc[last_day.strftime('%Y%m')] = (
-                        this_month_pso_final_le_data_avg
-                    )
-                    # for fluxcom le data
-                    this_month_fluxcom_le_data = fluxcom_le.loc[
-                        first_day:last_day_str
-                    ]
-                    this_month_fluxcom_le_data_avg = (
-                        this_month_fluxcom_le_data.mean()
-                    )
-                    fluxcom_le_mon.loc[last_day.strftime('%Y%m')] = (
-                        this_month_fluxcom_le_data_avg
-                    )
-                    # update last month holder
-                    first_day = curr.strftime('%Y-%m-%d')
-                    last_month = curr.strftime('%m')
-                # update curr and mvoe to next step
-                curr += datetime.timedelta(days=1)
-            # get the weighted average over the whole watershed and add to
-            # array
-            # for default streamflow
-            default_strm_mon_np = np.array(default_strm_mon)
-            default_strm_mon_avg = np.average(
-                default_strm_mon_np,axis=1,weights=this_perc
+            ## get the weighted average over the whole watershed and add to
+            ## array
+            ## for default streamflow
+            default_strm_np = np.array(default_strm)
+            default_strm_avg = np.average(
+                default_strm_np,axis=1,weights=this_perc
             )
-            default_all_strm[:,w] = default_strm_mon_avg
+            default_all_strm[:,w] = default_strm_avg
             # for default runoff
-            default_runoff_mon_np = np.array(default_runoff_mon)
-            default_runoff_mon_avg = np.average(
-                default_runoff_mon_np,axis=1,weights=this_perc
+            default_runoff_np = np.array(default_runoff)
+            default_runoff_avg = np.average(
+                default_runoff_np,axis=1,weights=this_perc
             )
-            default_all_runoff[:,w] = default_runoff_mon_avg
+            default_all_runoff[:,w] = default_runoff_avg
             # for default baseflow
-            default_baseflow_mon_np = np.array(default_baseflow_mon)
-            default_baseflow_mon_avg = np.average(
-                default_baseflow_mon_np,axis=1,weights=this_perc
+            default_baseflow_np = np.array(default_baseflow)
+            default_baseflow_avg = np.average(
+                default_baseflow_np,axis=1,weights=this_perc
             )
-            default_all_baseflow[:,w] = default_baseflow_mon_avg
+            default_all_baseflow[:,w] = default_baseflow_avg
             # for default metf
             if get_metf:
-                default_rainfsnowf_mon_np = np.array(default_rainfsnowf_mon)
-                default_rainfsnowf_mon_avg = np.average(
-                    default_rainfsnowf_mon_np,axis=1,weights=this_perc
+                default_rainfsnowf_np = np.array(default_rainfsnowf)
+                default_rainfsnowf_avg = np.average(
+                    default_rainfsnowf_np,axis=1,weights=this_perc
                 )
-                default_all_rainfsnowf[:,w] = default_rainfsnowf_mon_avg
+                default_all_rainfsnowf[:,w] = default_rainfsnowf_avg
             # for default le
-            default_le_mon_np = np.array(default_le_mon)
-            default_le_mon_avg = np.average(
-                default_le_mon_np,axis=1,weights=this_perc
+            default_le_np = np.array(default_le)
+            default_le_avg = np.average(
+                default_le_np,axis=1,weights=this_perc
             )
-            default_all_le[:,w] = default_le_mon_avg
-            # for pso_init streamflow
-            pso_init_strm_mon_np = np.array(pso_init_strm_mon)
-            pso_init_strm_mon_avg = np.average(
-                pso_init_strm_mon_np,axis=1,weights=this_perc
-            )
-            pso_init_all_strm[:,w] = pso_init_strm_mon_avg
-            # for pso_init le
-            pso_init_le_mon_np = np.array(pso_init_le_mon)
-            pso_init_le_mon_avg = np.average(
-                pso_init_le_mon_np,axis=1,weights=this_perc
-            )
-            pso_init_all_le[:,w] = pso_init_le_mon_avg
-            # for pso_final streamflow
-            pso_final_strm_mon_np = np.array(pso_final_strm_mon)
-            pso_final_strm_mon_avg = np.average(
-                pso_final_strm_mon_np,axis=1,weights=this_perc
-            )
-            pso_final_all_strm[:,w] = pso_final_strm_mon_avg
-            # for pso_final le
-            pso_final_le_mon_np = np.array(pso_final_le_mon)
-            pso_final_le_mon_avg = np.average(
-                pso_final_le_mon_np,axis=1,weights=this_perc
-            )
-            pso_final_all_le[:,w] = pso_final_le_mon_avg
+            default_all_le[:,w] = default_le_avg
             # for fluxcom le
-            # let's get rid of nan's and replace with the average value
-            # across all pixels for that month. we
-            # don't want to cancel out the entire watershed because one pixels
-            # has an nan value in the fluxcom dataset
-            months = list(fluxcom_le_mon.index)
-            for m,mon in enumerate(months):
-                this_mon_vals = np.array(fluxcom_le_mon.loc[mon])
-                this_nan_idx = np.where(np.isnan(this_mon_vals) == True)
-                this_mon_avg = np.nanmean(this_mon_vals)
-                this_mon_vals[this_nan_idx] = this_mon_avg
-                fluxcom_le_mon.loc[mon] = this_mon_vals
-            fluxcom_le_mon_np = np.array(fluxcom_le_mon)
-            fluxcom_le_mon_avg = np.average(
-                fluxcom_le_mon_np,axis=1,weights=this_perc
+            fluxcom_le_np = np.array(fluxcom_le)
+            fluxcom_le_avg = np.average(
+                fluxcom_le_np,axis=1,weights=this_perc
             )
-            fluxcom_all_le[:,w] = fluxcom_le_mon_avg
-        times = list(streamflow_timeseries.index)
+            fluxcom_all_le[:,w] = fluxcom_le_avg
+            # for pso_init streamflow
+            pso_init_strm_np = np.array(pso_init_strm)
+            pso_init_strm_avg = np.average(
+                pso_init_strm_np,axis=1,weights=this_perc
+            )
+            pso_init_all_strm[:,w] = pso_init_strm_avg
+            # for pso_init le
+            pso_init_le_np = np.array(pso_init_le)
+            pso_init_le_avg = np.average(
+                pso_init_le_np,axis=1,weights=this_perc
+            )
+            pso_init_all_le[:,w] = pso_init_le_avg
+            # for pso_final streamflow
+            pso_final_strm_np = np.array(pso_final_strm)
+            pso_final_strm_avg = np.average(
+                pso_final_strm_np,axis=1,weights=this_perc
+            )
+            pso_final_all_strm[:,w] = pso_final_strm_avg
+            # for pso_final le
+            pso_final_le_np = np.array(pso_final_le)
+            pso_final_le_avg = np.average(
+                pso_final_le_np,axis=1,weights=this_perc
+            )
+            pso_final_all_le[:,w] = pso_final_le_avg
+        times = list(pso_final_runoff.index)
+        times_err = list(fluxcom_le.index)
         # for default stream
         default_strm_df = pd.DataFrame(
             default_all_strm,index=times,columns=watersheds
@@ -395,115 +248,83 @@ class analyze_watershed:
         pso_final_le_df.index.name = 'date'
         # for fluxcom le
         fluxcom_le_df = pd.DataFrame(
-            fluxcom_all_le,index=times,columns=watersheds
+            fluxcom_all_le,index=times_err,columns=watersheds
         )
         fluxcom_le_df.index.name = 'date'
         outs = {
             'default_strm':default_strm_df,
             'default_runoff':default_runoff_df,
             'default_baseflow':default_baseflow_df,
-            'defualt_le':default_le_df,
+            'default_le':default_le_df,
             'fluxcom_le':fluxcom_le_df,
             'waterwatch_strm':streamflow_timeseries,
             'pso_init_strm':pso_init_strm_df,
             'pso_init_le':pso_init_le_df,
             'pso_final_strm':pso_final_strm_df,
-            'pso_final_le':pso_final_strm_df,
+            'pso_final_le':pso_final_le_df,
         }
         if get_metf:
             outs['default_rainfsnowf'] = default_rainfsnowf_df
         return outs
     def plot_streamflow_timeseries(self,outs,plots_dir,exp_names):
-        default_strm = outs['default_strm']
-        pso_init_strm = outs['pso_init_strm']
-        pso_final_strm = outs['pso_final_strm']
-        waterwatch_strm = outs['waterwatch_strm']
-        watersheds = list(default_strm.columns)
+        default_le = outs['default_le']
+        pso_init_le = outs['pso_init_strm']
+        pso_final_le = outs['pso_final_le']
+        fluxcom_le = outs['fluxcom_le']
+        watersheds = list(default_le.columns)
         for w,wat in enumerate(watersheds):
-            this_default_strm = default_strm[wat]
-            this_waterwatch_strm = waterwatch_strm[str(wat)]
-            this_pso_init_strm = pso_init_strm[wat]
-            this_pso_final_strm = pso_final_strm[wat]
-            dates = list(default_strm.index)
-            dates_dtm = [
-                datetime.datetime.strptime(str(d),'%Y%m') for d in dates
-            ]
-            this_exp = exp_names[2]
-            savename = os.path.join(
-                plots_dir,'streamflow_timeseries_{}_{}.png'.format(this_exp,wat)
-            )
-            plt.figure()
-            plt.plot(
-                dates_dtm,this_default_strm,label='Default Catchment-CN',
-                c='r'
-            )
-            plt.plot(
-                dates_dtm,this_waterwatch_strm,label='WaterWatch',
-                c='k'
-            )
-            plt.plot(
-                dates_dtm,this_pso_init_strm,label='PSO Init Catchment-CN',
-                c='y'
-            )
-            plt.plot(
-                dates_dtm,this_pso_final_strm,label='PSO Final Catchment-CN',
-                c='g'
-            )
-            plt.legend()
-            plt.xlabel('Date')
-            plt.ylabel('Streamflow (mm/month)')
-            plt.savefig(savename,dpi=300,bbox_inches='tight')
-            plt.close()
-        # let's do the same thing for streamflow, runoff, baseflow just for the
-        # default catchment-CN case
-        default_strm = outs['default_strm']
-        default_runoff = outs['default_runoff']
-        default_baseflow = outs['default_baseflow']
-        waterwatch_strm = outs['waterwatch_strm']
-        watersheds = list(default_strm.columns)
-        for w,wat in enumerate(watersheds):
-            this_default_strm = default_strm[wat]
-            this_default_runoff = default_runoff[wat]
-            this_default_baseflow = default_baseflow[wat]
-            this_waterwatch_strm = waterwatch_strm[str(wat)]
-            dates = list(default_strm.index)
-            dates_dtm = [
-                datetime.datetime.strptime(str(d),'%Y%m') for d in dates
-            ]
+            print('plotting le watershed-scale timeseries for wat {}'.format(
+                wat
+            ))
+            this_default_le = default_le[wat]
+            this_fluxcom_le = fluxcom_le[wat]
+            this_pso_init_le = pso_init_le[wat]
+            this_pso_final_le = pso_final_le[wat]
+            dates_dtm = list(default_le.index)
             this_exp = exp_names[0]
             savename = os.path.join(
-                plots_dir,'streamflow_runoff_baseflow_timeseries_{}_{}.png'.format(
-                    this_exp,wat
-                )
+                plots_dir,'le_timeseries_watershed_scale_{}_{}.png'.format(this_exp,wat)
             )
             plt.figure()
             plt.plot(
-                dates_dtm,this_default_strm,label='Catchment-CN Streamflow',
-                c='r'
+                dates_dtm,this_default_le,label='Default Catchment-CN4.5',
+                c='r',linewidth=.8
             )
             plt.plot(
-                dates_dtm,this_waterwatch_strm,label='WaterWatch Streamflow',
-                c='k'
+                dates_dtm,this_fluxcom_le,label='GLEAM',
+                c='k',linewidth=.8
             )
-            plt.plot(
-                dates_dtm,this_default_runoff,label='Catchment-CN Runoff',
-                c='y'
-            )
-            plt.plot(
-                dates_dtm,this_default_baseflow,label='Catchment-CN Baseflow',
-                c='g'
-            )
+            #plt.plot(
+            #    dates_dtm,this_pso_init_le,label='CN4.5 Ball-Berry',
+            #    c='y',linewidth=.8
+            #)
+            #plt.plot(
+            #    dates_dtm,this_pso_final_le,label='CN4.5 Medlyn',
+            #    c='g',linewidth=.8
+            #)
             plt.legend()
             plt.xlabel('Date')
-            plt.ylabel('mm/month')
+            plt.ylabel('LE (W/m2)')
             plt.savefig(savename,dpi=300,bbox_inches='tight')
             plt.close()
-    def get_rmse_dict(self,outs,lai_fname,intersection_info,all_tiles):
+    def get_rmse_dict(self,outs,lai_fname,intersection_info,all_tiles,
+                      start_err,end_err,plot_timeseries,exp_names,
+                      plots_dir):
         # let's start by analyzing stream data
         default_strm = outs['default_strm']
         waterwatch_strm = outs['waterwatch_strm']
         pso_init_strm = outs['pso_init_strm']
         pso_final_strm = outs['pso_final_strm']
+        default_le = outs['default_le']
+        pso_le = outs['pso_final_le']
+        fluxcom_le = outs['fluxcom_le']
+        # let's trim these to only our analysis days
+        start_fmt = start_err.strftime('%Y%m%d')
+        end_fmt = end_err.strftime('%Y%m%d')
+        default_strm = default_strm.loc[start_fmt:end_fmt]
+        waterwatch_strm = waterwatch_strm.loc[start_fmt:end_fmt]
+        pso_init_strm = pso_init_strm.loc[start_fmt:end_fmt]
+        pso_final_strm = pso_final_strm.loc[start_fmt:end_fmt]
         # let's start by returning avg streamflow, streamflow rmse, and lai 
         # values
 
@@ -560,22 +381,131 @@ class analyze_watershed:
         waterwatch_strm_avg = np.append(
             waterwatch_strm_avg,waterwatch_strm_avg.mean())
         waterwatch_df.loc['strm'] = waterwatch_strm_avg
+        default_df.loc['strm_obs'] = waterwatch_strm_avg
+        pso_final_df.loc['strm_obs'] = waterwatch_strm_avg
+        # also for default et
+        default_le_avg = np.array(default_le.mean())
+        default_le_avg = np.append(
+            default_le_avg,default_le_avg.mean())
+        default_df.loc['le'] = default_le_avg
+        # and for pso et
+        pso_le_avg = np.array(pso_le.mean())
+        pso_le_avg = np.append(
+            pso_le_avg,pso_le_avg.mean())
+        pso_final_df.loc['le'] = pso_le_avg
+        # and for observed et
+        fluxcom_le_avg = np.array(fluxcom_le.mean())
+        fluxcom_le_avg = np.append(
+            fluxcom_le_avg,fluxcom_le_avg.mean())
+        default_df.loc['le_obs'] = fluxcom_le_avg
+        pso_final_df.loc['le_obs'] = fluxcom_le_avg
         # let's get the rmse for the different senarios
         catch_cols = list(default_strm.columns)
         waterwatch_strm_int = waterwatch_strm.set_axis(catch_cols,axis=1)
+        # okay, we need to average to yearly now
+        year_start = copy.deepcopy(start_err)
+        year_end = (
+            year_start +
+            relativedelta.relativedelta(years=1) -
+            relativedelta.relativedelta(days=1)
+        )
+        model_times = np.array(pso_final_strm.index)
+        cols_yr = cols[:-1]
+        cols_yr = np.append(cols_yr,'time')
+        default_strm_yr = pd.DataFrame(columns=cols_yr)
+        default_strm_yr = default_strm_yr.set_index('time')
+        default_strm_yr = default_strm_yr.set_axis(catch_cols,axis=1)
+        pso_init_strm_yr = pd.DataFrame(columns=cols_yr)
+        pso_init_strm_yr = pso_init_strm_yr.set_index('time')
+        pso_init_strm_yr = pso_init_strm_yr.set_axis(catch_cols,axis=1)
+        pso_final_strm_yr = pd.DataFrame(columns=cols_yr)
+        pso_final_strm_yr = pso_final_strm_yr.set_index('time')
+        pso_final_strm_yr = pso_final_strm_yr.set_axis(catch_cols,axis=1)
+        while year_end <= end_err:
+            start_idx = np.where(
+                model_times == np.datetime64(year_start)
+            )[0][0]
+            end_idx = np.where(
+                model_times == np.datetime64(year_end)
+            )[0][0]
+            default_this_year_vals = default_strm.iloc[
+                start_idx:end_idx+1
+            ]
+            pso_init_this_year_vals = pso_init_strm.iloc[
+                start_idx:end_idx+1
+            ]
+            pso_final_this_year_vals = pso_final_strm.iloc[
+                start_idx:end_idx+1
+            ]
+            avg_default_strm = np.array(default_this_year_vals.mean())
+            avg_pso_init_strm = np.array(pso_init_this_year_vals.mean())
+            avg_pso_final_strm = np.array(pso_final_this_year_vals.mean())
+            idx_name = year_start.strftime('%Y%m%d')
+            idx_name = np.int64(idx_name)
+            default_strm_yr.loc[idx_name] = avg_default_strm
+            pso_init_strm_yr.loc[idx_name] = avg_pso_init_strm
+            pso_final_strm_yr.loc[idx_name] = avg_pso_final_strm
+            year_start += relativedelta.relativedelta(years=1)
+            year_end += relativedelta.relativedelta(years=1)
+        dates = list(default_strm_yr.index)
+        dates_dtm = [
+            datetime.datetime.strptime(str(d),'%Y%m%d') for d in dates
+        ]
+        if plot_timeseries:
+            for w,wat in enumerate(watersheds):
+                print(
+                    'plotting timeseries for watershed {}'.format(
+                        wat
+                    )
+                )
+                this_default_strm = default_strm_yr[wat]
+                this_pso_strm = pso_final_strm_yr[wat]
+                this_waterwatch_strm = waterwatch_strm_int[wat]
+                this_exp = exp_names[0]
+                savename = os.path.join(
+                    plots_dir,'streamflow_yearly_timeseries_{}_{}.png'.format(
+                        this_exp,wat
+                    )
+                )
+                plt.figure()
+                plt.plot(
+                    dates_dtm,this_default_strm,label='Default streamflow',
+                    c='r',linewidth=.8
+                )
+                plt.plot(
+                    dates_dtm,this_waterwatch_strm,label='CAMELS Streamflow',
+                    c='k',linewidth=.8
+                )
+                #plt.plot(
+                #    dates_dtm,this_default_runoff,label='PSO iteration 1',
+                #    c='y',linewidth=.8
+                #)
+                #plt.plot(
+                #    dates_dtm,this_default_baseflow,label='PSO final iteration',
+                #    c='g',linewidth=.8
+                #)
+                plt.legend()
+                plt.xlabel('Date')
+                plt.ylabel('mm/day')
+                plt.savefig(savename,dpi=300,bbox_inches='tight')
+                plt.close()
         # caluclate rmse for default catchment-cn
-        default_diff = np.array(default_strm - waterwatch_strm_int)
-        default_diff_ave = np.mean(default_diff,axis=0)
-        default_diff_ave_avg = np.mean(default_diff_ave)
-        default_diff_ave = np.append(default_diff_ave,default_diff_ave_avg)
-        default_df.loc['strm_diff'] = default_diff_ave
-        default_se = default_diff**2
-        default_mse = np.mean(default_se,axis=0)
-        default_rmse = np.sqrt(default_mse)
-        default_rmse_all = np.mean(default_rmse)
-        default_rmse = np.append(default_rmse,default_rmse_all)
-        default_df.loc['strm_rmse'] = default_rmse
+        #default_diff = np.array(default_strm_yr - waterwatch_strm_int)
+        #default_diff_ave = np.mean(default_diff,axis=0)
+        #default_diff_ave_avg = np.mean(default_diff_ave)
+        #default_diff_ave = np.append(default_diff_ave,default_diff_ave_avg)
+        #default_df.loc['strm_diff'] = default_diff_ave
+        #default_se = default_diff**2
+        #default_mse = np.mean(default_se,axis=0)
+        #default_rmse = np.sqrt(default_mse)
+        #default_rmse_all = np.mean(default_rmse)
+        #default_rmse = np.append(default_rmse,default_rmse_all)
+        #default_df.loc['strm_rmse'] = default_rmse
         # calculate r2 for default catchment-CN
+        default_diff = np.zeros(len(catch_cols))
+        pso_diff = np.zeros(len(catch_cols))
+        default_rmse = np.zeros(len(catch_cols))
+        pso_rmse = np.zeros(len(catch_cols))
         default_r2 = np.zeros(len(catch_cols))
         pso_r2 = np.zeros(len(catch_cols))
         default_corr = np.zeros(len(catch_cols))
@@ -584,10 +514,49 @@ class analyze_watershed:
         pso_ubrmse = np.zeros(len(catch_cols))
         default_nse = np.zeros(len(catch_cols))
         pso_nse = np.zeros(len(catch_cols))
+        default_diff_le = np.zeros(len(catch_cols))
+        pso_diff_le = np.zeros(len(catch_cols))
+        default_rmse_le = np.zeros(len(catch_cols))
+        pso_rmse_le = np.zeros(len(catch_cols))
+        default_r2_le = np.zeros(len(catch_cols))
+        pso_r2_le = np.zeros(len(catch_cols))
+        default_corr_le = np.zeros(len(catch_cols))
+        pso_corr_le = np.zeros(len(catch_cols))
+        default_ubrmse_le = np.zeros(len(catch_cols))
+        pso_ubrmse_le = np.zeros(len(catch_cols))
         for c,col in enumerate(catch_cols):
-            this_default = default_strm[col]
-            this_pso = pso_final_strm[col]
-            this_waterwatch = waterwatch_strm_int[col]
+            this_default = np.array(default_strm_yr[col])
+            this_pso = np.array(pso_final_strm_yr[col])
+            this_waterwatch = np.array(waterwatch_strm_int[col])
+            not_nan_idx = np.where(
+                np.isnan(this_waterwatch) == False
+            )
+            this_default_le = np.array(default_le[col])
+            this_pso_le = np.array(pso_le[col])
+            this_fluxcom = np.array(fluxcom_le[col])
+            not_nan_idx_le = np.where(
+                np.isnan(this_fluxcom) == False
+            )
+            this_default = this_default[not_nan_idx]
+            this_pso = this_pso[not_nan_idx]
+            this_waterwatch = this_waterwatch[not_nan_idx]
+            this_default_le = this_default_le[not_nan_idx_le]
+            this_pso_le = this_pso_le[not_nan_idx_le]
+            this_fluxcom = this_fluxcom[not_nan_idx_le]
+            # calculate the default difference in average
+            element_default_diff = this_default - this_waterwatch
+            this_default_diff = np.mean(element_default_diff)
+            # calculate the pso different in average
+            element_pso_diff = this_pso - this_waterwatch
+            this_pso_diff = np.mean(element_pso_diff)
+            # calculate the default rmse
+            default_se = element_default_diff**2
+            default_mse = np.mean(default_se)
+            this_default_rmse = np.sqrt(default_mse)
+            # calculate the pso rmse
+            pso_se = element_pso_diff**2
+            pso_mse = np.mean(pso_se)
+            this_pso_rmse = np.sqrt(pso_mse)
             # calculate the r2 for default
             this_rss = np.sum(
                 np.square(
@@ -711,6 +680,10 @@ class analyze_watershed:
             )
             this_pso_nse = 1 - nse_numerator/nse_denom
             # add to running error metrics
+            default_diff[c] = this_default_diff
+            pso_diff[c] = this_pso_diff
+            default_rmse[c] = this_default_rmse
+            pso_rmse[c] = this_pso_rmse
             default_r2[c] = this_default_r2
             pso_r2[c] = this_pso_r2
             default_corr[c] = this_default_corr
@@ -719,20 +692,187 @@ class analyze_watershed:
             pso_ubrmse[c] = this_pso_ubrmse
             default_nse[c] = this_default_nse
             pso_nse[c] = this_pso_nse
+            # calculate the default difference in average
+            element_default_diff_le = this_default_le - this_fluxcom
+            this_default_diff_le = np.mean(element_default_diff_le)
+            # calculate the pso different in average
+            element_pso_diff_le = this_pso_le - this_fluxcom
+            this_pso_diff_le = np.mean(element_pso_diff_le)
+            # calculate the default rmse
+            default_se_le = element_default_diff_le**2
+            default_mse_le = np.mean(default_se_le)
+            this_default_rmse_le = np.sqrt(default_mse_le)
+            # calculate the pso rmse
+            pso_se_le = element_pso_diff_le**2
+            pso_mse_le = np.mean(pso_se_le)
+            this_pso_rmse_le = np.sqrt(pso_mse_le)
+            # calculate the r2 for default
+            this_rss_le = np.sum(
+                np.square(
+                    this_fluxcom - this_default_le
+                )
+            )
+            this_avg_y_le = np.average(this_fluxcom)
+            this_tss_le = np.sum(
+                np.square(
+                    this_fluxcom - this_avg_y_le
+                )
+            )
+            this_default_r2_le = 1 - this_rss_le/this_tss_le
+            # calculate the r2 for pso
+            this_rss_le = np.sum(
+                np.square(
+                    this_fluxcom - this_pso_le
+                )
+            )
+            this_avg_y_le = np.average(this_fluxcom)
+            this_tss_le = np.sum(
+                np.square(
+                    this_fluxcom - this_avg_y_le
+                )
+            )
+            this_pso_r2_le = 1 - this_rss_le/this_tss_le
+            # calcaulte the default correlation coefficient
+            this_avg_x_le = np.mean(this_default_le)
+            numerator_le = np.sum(
+                (this_default_le - this_avg_x_le)*
+                (this_fluxcom - this_avg_y_le)
+            )
+            denominator_1_le = np.sqrt(
+                np.sum(
+                    np.square(
+                        this_default_le - this_avg_x_le
+                    )
+                )
+            )
+            denominator_2_le = np.sqrt(
+                np.sum(
+                    np.square(
+                        this_fluxcom - this_avg_y_le
+                    )
+                )
+            )
+            denominator_le = denominator_1_le*denominator_2_le
+            this_default_corr_le = numerator_le/denominator_le
+            # calcaulte the pso correlation coefficient
+            this_avg_x_le = np.mean(this_pso_le)
+            numerator_le = np.sum(
+                (this_pso_le - this_avg_x_le)*
+                (this_fluxcom - this_avg_y_le)
+            )
+            denominator_1_le = np.sqrt(
+                np.sum(
+                    np.square(
+                        this_pso_le - this_avg_x_le
+                    )
+                )
+            )
+            denominator_2_le = np.sqrt(
+                np.sum(
+                    np.square(
+                        this_fluxcom - this_avg_y_le
+                    )
+                )
+            )
+            denominator_le = denominator_1_le*denominator_2_le
+            this_pso_corr_le = numerator_le/denominator_le
+            # calculate default ubrmse
+            this_default_ubrmse_le = np.sqrt(
+                (
+                    (
+                        (
+                            this_default_le -
+                            this_avg_x_le
+                        ) - (
+                            this_fluxcom -
+                            this_avg_y_le
+                        )
+                    )**2
+                ).mean()
+            )
+            # calculate pso ubrmse
+            this_pso_ubrmse_le = np.sqrt(
+                (
+                    (
+                        (
+                            this_pso_le -
+                            this_avg_x_le
+                        ) - (
+                            this_fluxcom -
+                            this_avg_y_le
+                        )
+                    )**2
+                ).mean()
+            )
+            # add to running error metrics
+            default_diff_le[c] = this_default_diff
+            pso_diff_le[c] = this_pso_diff_le
+            default_rmse_le[c] = this_default_rmse_le
+            pso_rmse_le[c] = this_pso_rmse_le
+            default_r2_le[c] = this_default_r2_le
+            pso_r2_le[c] = this_pso_r2_le
+            default_corr_le[c] = this_default_corr_le
+            pso_corr_le[c] = this_pso_corr_le
+            default_ubrmse_le[c] = this_default_ubrmse_le
+            pso_ubrmse_le[c] = this_pso_ubrmse_le
         # we're going to need some np arrays for this
         waterwatch_strm_int_np = np.array(waterwatch_strm_int)
-        default_strm_np = np.array(default_strm)
-        pso_final_strm_np = np.array(pso_final_strm)
+        default_strm_yr_np = np.array(default_strm_yr)
+        pso_final_strm_yr_np = np.array(pso_final_strm_yr)
+        all_not_nan_idx = np.where(
+            np.isnan(waterwatch_strm_int_np) == False
+        )
+        waterwatch_strm_int_np = waterwatch_strm_int_np[
+            all_not_nan_idx
+        ]
+        default_strm_yr_np = default_strm_yr_np[all_not_nan_idx]
+        pso_final_strm_yr_np = pso_final_strm_yr_np[all_not_nan_idx]
+        fluxcom_le_np = np.array(fluxcom_le)
+        default_le_np = np.array(default_le)
+        pso_le_np = np.array(pso_le)
+        all_not_nan_idx_le = np.where(
+            np.isnan(fluxcom_le_np) == False
+        )
+        fluxcom_le_np = fluxcom_le_np[
+            all_not_nan_idx_le
+        ]
+        default_le_np = default_le_np[
+            all_not_nan_idx_le
+        ]
+        pso_le_np = pso_le_np[
+            all_not_nan_idx_le
+        ]
+        # calculate the diff for default all
+        all_avg_waterwatch = np.average(waterwatch_strm_int_np)
+        all_avg_default = np.average(default_strm_yr_np)
+        all_default_diff = all_avg_default - all_avg_waterwatch
+        default_diff = np.append(default_diff,all_default_diff)
+        # calculate the diff for pso all
+        all_avg_pso = np.average(pso_final_strm_yr_np)
+        all_pso_diff = all_avg_pso - all_avg_waterwatch
+        pso_diff = np.append(pso_diff,all_pso_diff)
+        # calculate the default rmse for all
+        all_default_diff = default_strm_yr_np - waterwatch_strm_int_np
+        all_default_se = all_default_diff**2
+        all_default_mse = np.mean(all_default_se)
+        all_default_rmse = np.sqrt(all_default_mse)
+        default_rmse = np.append(default_rmse,all_default_rmse)
+        # calculate the pso rmse for all
+        all_pso_diff = pso_final_strm_yr_np - waterwatch_strm_int_np
+        all_pso_se = all_pso_diff**2
+        all_pso_mse = np.mean(all_pso_se)
+        all_pso_rmse = np.sqrt(all_pso_mse)
+        pso_rmse = np.append(pso_rmse,all_pso_rmse)
         # calculate the r2 for default all
         all_rss = np.sum(
             np.square(
-                np.array(waterwatch_strm_int_np - default_strm_np)
+                np.array(waterwatch_strm_int_np - default_strm_yr_np)
             )
         )
         all_avg_y = np.average(waterwatch_strm_int_np)
         all_tss = np.sum(
             np.square(
-                np.array(waterwatch_strm - all_avg_y)
+                np.array(waterwatch_strm_int_np - all_avg_y)
             )
         )
         default_all_r2 = 1 - all_rss/all_tss
@@ -740,27 +880,27 @@ class analyze_watershed:
         # calculate the r2 for pso all
         all_rss = np.sum(
             np.square(
-                np.array(waterwatch_strm_int_np - pso_final_strm_np)
+                np.array(waterwatch_strm_int_np - pso_final_strm_yr_np)
             )
         )
         all_avg_y = np.average(waterwatch_strm_int_np)
         all_tss = np.sum(
             np.square(
-                np.array(waterwatch_strm - all_avg_y)
+                np.array(waterwatch_strm_int_np - all_avg_y)
             )
         )
         pso_all_r2 = 1 - all_rss/all_tss
         pso_r2 = np.append(pso_r2,pso_all_r2)
         # calcaulte the default correlation coefficient
-        all_avg_x = np.mean(default_strm_np)
+        all_avg_x = np.mean(default_strm_yr_np)
         numerator = np.sum(
-            (default_strm_np - all_avg_x)*
+            (default_strm_yr_np - all_avg_x)*
             (waterwatch_strm_int_np - all_avg_y)
         )
         denominator_1 = np.sqrt(
             np.sum(
                 np.square(
-                    default_strm_np - all_avg_x
+                    default_strm_yr_np - all_avg_x
                 )
             )
         )
@@ -775,15 +915,15 @@ class analyze_watershed:
         all_default_corr = numerator/denominator
         default_corr = np.append(default_corr,all_default_corr)
         # calcaulte the pso correlation coefficient
-        all_avg_x = np.mean(pso_final_strm_np)
+        all_avg_x = np.mean(pso_final_strm_yr_np)
         numerator = np.sum(
-            (pso_final_strm_np - all_avg_x)*
+            (pso_final_strm_yr_np - all_avg_x)*
             (waterwatch_strm_int_np - all_avg_y)
         )
         denominator_1 = np.sqrt(
             np.sum(
                 np.square(
-                    pso_final_strm_np - all_avg_x
+                    pso_final_strm_yr_np - all_avg_x
                 )
             )
         )
@@ -802,7 +942,7 @@ class analyze_watershed:
             (
                 (
                     (
-                        default_strm_np -
+                        default_strm_yr_np -
                         all_avg_x
                     ) - (
                         waterwatch_strm_int_np -
@@ -817,7 +957,7 @@ class analyze_watershed:
             (
                 (
                     (
-                        pso_final_strm_np -
+                        pso_final_strm_yr_np -
                         all_avg_x
                     ) - (
                         waterwatch_strm_int_np -
@@ -830,7 +970,7 @@ class analyze_watershed:
         # calculate the default nse
         nse_numerator = np.sum(
             np.square(
-                waterwatch_strm_int_np - default_strm_np
+                waterwatch_strm_int_np - default_strm_yr_np
             )
         )
         nse_denom = np.sum(
@@ -843,7 +983,7 @@ class analyze_watershed:
         # calculate the pso nse
         nse_numerator = np.sum(
             np.square(
-                waterwatch_strm_int_np - pso_final_strm_np
+                waterwatch_strm_int_np - pso_final_strm_yr_np
             )
         )
         nse_denom = np.sum(
@@ -853,72 +993,399 @@ class analyze_watershed:
         )
         all_pso_nse = 1 - nse_numerator/nse_denom
         pso_nse = np.append(pso_nse,all_pso_nse)
+        # calculate the diff for default all
+        all_avg_fluxcom_le = np.average(fluxcom_le_np)
+        all_avg_default_le = np.average(default_le_np)
+        all_default_diff_le = all_avg_default_le - all_avg_fluxcom_le
+        default_diff_le = np.append(default_diff_le,all_default_diff_le)
+        # calculate the diff for pso all
+        all_avg_pso_le = np.average(pso_le_np)
+        all_pso_diff_le = all_avg_pso_le - all_avg_fluxcom_le
+        pso_diff_le = np.append(pso_diff_le,all_pso_diff_le)
+        # calculate the default rmse for all
+        all_default_diff_le = default_le_np - fluxcom_le_np
+        all_default_se_le = all_default_diff_le**2
+        all_default_mse_le = np.mean(all_default_se_le)
+        all_default_rmse_le = np.sqrt(all_default_mse_le)
+        default_rmse_le = np.append(default_rmse_le,all_default_rmse_le)
+        # calculate the pso rmse for all
+        all_pso_diff_le = pso_le_np - fluxcom_le_np
+        all_pso_se_le = all_pso_diff_le**2
+        all_pso_mse_le = np.mean(all_pso_se_le)
+        all_pso_rmse_le = np.sqrt(all_pso_mse_le)
+        pso_rmse_le = np.append(pso_rmse_le,all_pso_rmse_le)
+        # calculate the r2 for default all
+        all_rss_le = np.sum(
+            np.square(
+                np.array(fluxcom_le_np - default_le_np)
+            )
+        )
+        all_avg_y_le = np.average(fluxcom_le_np)
+        all_tss_le = np.sum(
+            np.square(
+                np.array(fluxcom_le_np - all_avg_y_le)
+            )
+        )
+        default_all_r2_le = 1 - all_rss_le/all_tss_le
+        default_r2_le = np.append(default_r2_le,default_all_r2_le)
+        # calculate the r2 for pso all
+        all_rss_le = np.sum(
+            np.square(
+                np.array(fluxcom_le_np - pso_le_np)
+            )
+        )
+        all_avg_y_le = np.average(fluxcom_le_np)
+        all_tss_le = np.sum(
+            np.square(
+                np.array(fluxcom_le_np - all_avg_y_le)
+            )
+        )
+        pso_all_r2_le = 1 - all_rss_le/all_tss_le
+        pso_r2_le = np.append(pso_r2_le,pso_all_r2_le)
+        # calcaulte the default correlation coefficient
+        all_avg_x_le = np.mean(default_le_np)
+        numerator_le = np.sum(
+            (default_le_np - all_avg_x_le)*
+            (fluxcom_le_np - all_avg_y_le)
+        )
+        denominator_1_le = np.sqrt(
+            np.sum(
+                np.square(
+                    default_le_np - all_avg_x_le
+                )
+            )
+        )
+        denominator_2_le = np.sqrt(
+            np.sum(
+                np.square(
+                    fluxcom_le_np - all_avg_y_le
+                )
+            )
+        )
+        denominator_le = denominator_1_le*denominator_2_le
+        all_default_corr_le = numerator_le/denominator_le
+        default_corr_le = np.append(default_corr_le,all_default_corr_le)
+        # calcaulte the pso correlation coefficient
+        all_avg_x_le = np.mean(pso_le_np)
+        numerator_le = np.sum(
+            (pso_le_np - all_avg_x_le)*
+            (fluxcom_le_np - all_avg_y_le)
+        )
+        denominator_1_le = np.sqrt(
+            np.sum(
+                np.square(
+                    pso_le_np - all_avg_x_le
+                )
+            )
+        )
+        denominator_2_le = np.sqrt(
+            np.sum(
+                np.square(
+                    fluxcom_le_np - all_avg_y_le
+                )
+            )
+        )
+        denominator_le = denominator_1_le*denominator_2_le
+        all_pso_corr_le = numerator_le/denominator_le
+        pso_corr_le = np.append(pso_corr_le,all_pso_corr_le)
+        # calculate default ubrmse
+        all_default_ubrmse_le = np.sqrt(
+            (
+                (
+                    (
+                        default_le_np -
+                        all_avg_x_le
+                    ) - (
+                        fluxcom_le_np -
+                        all_avg_y_le
+                    )
+                )**2
+            ).mean()
+        )
+        default_ubrmse_le = np.append(default_ubrmse_le,all_default_ubrmse_le)
+        # calculate pso ubrmse
+        all_pso_ubrmse_le = np.sqrt(
+            (
+                (
+                    (
+                        pso_le_np -
+                        all_avg_x_le
+                    ) - (
+                        fluxcom_le_np -
+                        all_avg_y_le
+                    )
+                )**2
+            ).mean()
+        )
+        pso_ubrmse_le = np.append(pso_ubrmse_le,all_pso_ubrmse_le)
         # lets add all these new metrics to the dataframes
+        default_df.loc['strm_avg_diff'] = default_diff
+        default_df.loc['strm_rmse'] = default_rmse
         default_df.loc['strm_r2'] = default_r2
         default_df.loc['strm_corr'] = default_corr
         default_df.loc['strm_ubrmse'] = default_ubrmse
         default_df.loc['strm_nse'] = default_nse
+        default_df.loc['le_avg_diff'] = default_diff_le
+        default_df.loc['le_rmse'] = default_rmse_le
+        default_df.loc['le_r2'] = default_r2_le
+        default_df.loc['le_corr'] = default_corr_le
+        default_df.loc['le_ubrmse'] = default_ubrmse_le
+        pso_final_df.loc['strm_avg_diff'] = pso_diff
+        pso_final_df.loc['strm_rmse'] = pso_rmse
         pso_final_df.loc['strm_r2'] = pso_r2
         pso_final_df.loc['strm_corr'] = pso_corr
         pso_final_df.loc['strm_ubrmse'] = pso_ubrmse
         pso_final_df.loc['strm_nse'] = pso_nse
+        pso_final_df.loc['le_avg_diff'] = pso_diff_le
+        pso_final_df.loc['le_rmse'] = pso_rmse_le
+        pso_final_df.loc['le_r2'] = pso_r2_le
+        pso_final_df.loc['le_corr'] = pso_corr_le
+        print(pso_ubrmse_le)
+        print(len(pso_ubrmse_le))
+        pso_final_df.loc['le_ubrmse'] = pso_ubrmse_le
         # caluclate rmse for pso_init catchment-cn
-        pso_init_diff = np.array(pso_init_strm - waterwatch_strm_int)
+        pso_init_diff = np.array(pso_init_strm_yr - waterwatch_strm_int)
         pso_init_se = pso_init_diff**2
         pso_init_mse = np.mean(pso_init_se,axis=0)
         pso_init_rmse = np.sqrt(pso_init_mse)
         pso_init_rmse_all = np.mean(pso_init_rmse)
         pso_init_rmse = np.append(pso_init_rmse,pso_init_rmse_all)
         pso_init_df.loc['strm_rmse'] = pso_init_rmse
-        # caluclate rmse for pso_final catchment-cn
-        pso_final_diff = np.array(pso_final_strm - waterwatch_strm_int)
-        pso_final_se = pso_final_diff**2
-        pso_final_mse = np.mean(pso_final_se,axis=0)
-        pso_final_rmse = np.sqrt(pso_final_mse)
-        pso_final_rmse_all = np.mean(pso_final_rmse)
-        pso_final_rmse = np.append(pso_final_rmse,pso_final_rmse_all)
-        pso_final_df.loc['strm_rmse'] = pso_final_rmse
-        # calculate r2 for pso_final catchment-CN
-
-        # calculate nse for pso_final Catchment-CN
-
         # put these in their respective dataframes
         to_return = [
             default_df,pso_init_df,pso_final_df,waterwatch_df
         ]
         return to_return
-    def plot_water_metrics(self,default_df,waterwatch_df,plots_dir):
+    def plot_water_metrics(self,water_dict,plots_dir):
         # let's first make a plot of average lai versus streamflow
         # under-prediction to see if increasing ksat via lai might help with
         # catchment-cn underprediction problem
         # get the information we need
-        lai_vals = np.array(default_df.loc['lai'])
-        lai_vals_no_all = lai_vals[:-1]
-        default_strm = default_df.loc['strm']
-        default_strm_no_all = default_strm[:-1]
-        waterwatch_strm = waterwatch_df.loc['strm']
-        waterwatch_strm_no_all = waterwatch_strm[:-1]
-        strm_diff_no_all = default_strm_no_all - waterwatch_strm_no_all
-        huc_2s = np.arange(len(lai_vals_no_all)) + 1
-        savename = os.path.join(
-            plots_dir,'lai_verus_default_strm_prediction.png'
+        default_strm = water_dict['default_strm']
+        camels_strm = water_dict['waterwatch_strm']
+        default_le = water_dict['default_le']
+        fluxcom_le = water_dict['fluxcom_le']
+        # get the dates information neecessary for dividing into 2006 and 2007
+        dates = np.array(default_strm.index)
+        watersheds = np.array(default_strm.columns)
+        dates_2006_idx = np.where(dates < 20070000)[0]
+        dates_2007_idx = np.where(dates >= 20070000)[0]
+        # get the averages for each watershed over the desired years for
+        # streamflow
+        default_strm_2006 = default_strm.iloc[dates_2006_idx]
+        default_strm_2006_avg = np.array(default_strm_2006.mean())
+        default_strm_2007 = default_strm.iloc[dates_2007_idx]
+        default_strm_2007_avg = np.array(default_strm_2007.mean())
+        camels_strm_2006 = camels_strm.iloc[dates_2006_idx]
+        camels_strm_2006_avg = np.array(camels_strm_2006.mean())
+        camels_strm_2007 = camels_strm.iloc[dates_2007_idx]
+        camels_strm_2007_avg = np.array(camels_strm_2007.mean())
+        default_strm_2006_2007_avg = np.array(default_strm.mean())
+        camels_strm_2006_2007_avg = np.array(camels_strm.mean())
+        # get the averages over each watershed over the desired years for le
+        default_le_2006 = default_le.iloc[dates_2006_idx]
+        default_le_2006_avg = np.array(default_le_2006.mean())
+        default_le_2007 = default_le.iloc[dates_2007_idx]
+        default_le_2007_avg = np.array(default_le_2007.mean())
+        default_le_2006_2007_avg = np.array(default_le.mean())
+        fluxcom_le_2006 = fluxcom_le.iloc[dates_2006_idx]
+        fluxcom_le_2006_avg = np.array(fluxcom_le_2006.mean())
+        fluxcom_le_2007 = fluxcom_le.iloc[dates_2007_idx]
+        fluxcom_le_2007_avg = np.array(fluxcom_le_2007.mean())
+        fluxcom_le_2006_2007_avg = np.array(fluxcom_le.mean())
+        # get the difference in avg le/strm between 2006 and 2007
+        default_diff_strm_2006_2007 = (
+            np.sum(
+                np.absolute(
+                    (
+                        default_strm_2006_avg - default_strm_2007_avg
+                    )
+                    /default_strm_2006_avg
+                )
+                *100
+            )
+            /len(default_strm_2006_avg)
         )
-        m,b,r,p,stderr = linregress(lai_vals_no_all,strm_diff_no_all)
-        r_squared = r**2
-
-        # make the plot
+        camels_diff_strm_2006_2007 = (
+            np.sum(
+                np.absolute(
+                    (
+                        camels_strm_2006_avg - camels_strm_2007_avg
+                    )
+                    /camels_strm_2006_avg
+                )
+                *100
+            )
+            /len(camels_strm_2006_avg)
+        )
+        print(camels_diff_strm_2006_2007)
+        default_diff_le_2006_2007 = (
+            default_le_2006_avg - default_le_2007_avg
+        )
+        fluxcom_diff_le_2006_2007 = (
+            np.sum(
+                np.absolute(
+                    (
+                        fluxcom_le_2006_avg - fluxcom_le_2007_avg
+                    )
+                    /fluxcom_le_2006_avg
+                )
+                *100
+            )
+            /len(fluxcom_le_2006_avg)
+        )
+        # what do we want to save these as?
+        savename_strm_2006 = os.path.join(
+            plots_dir,'camels_strm_vs_default_strm_2006.png'
+        )
+        savename_strm_2007 = os.path.join(
+            plots_dir,'camels_strm_vs_default_strm_2007.png'
+        )
+        savename_strm_2006_2007 = os.path.join(
+            plots_dir,'camels_strm_vs_default_strm_2006_2007.png'
+        )
+        savename_le_2006 = os.path.join(
+            plots_dir,'fluxcom_le_vs_default_le_2006.png'
+        )
+        savename_le_2007 = os.path.join(
+            plots_dir,'fluxcom_le_vs_default_le_2007.png'
+        )
+        savename_le_2006_2007 = os.path.join(
+            plots_dir,'fluxcom_le_vs_default_le_2006_2007.png'
+        )
+        savename_default_diff_strm = os.path.join(
+            plots_dir,'default_avg_strm_2006_vs_default_avg_strm_2007.png'
+        )
+        savename_camels_diff_strm = os.path.join(
+            plots_dir,'camels_avg_strm_2006_vs_camels_avg_strm_2007.png'
+        )
+        savename_default_diff_le = os.path.join(
+            plots_dir,'default_avg_le_2006_vs_default_avg_le_2007.png'
+        )
+        savename_fluxcom_diff_le = os.path.join(
+            plots_dir,'fluxcom_avg_le_2006_vs_fluxcom_avg_le_2007.png'
+        )
+        # make the plot for 2006 streamflow
         plt.figure()
-        plt.scatter(lai_vals_no_all,strm_diff_no_all)
-        plt.plot(lai_vals_no_all,m*lai_vals_no_all+b)
-        # plot the R2 value
+        plt.scatter(camels_strm_2006_avg,default_strm_2006_avg,s=2)
+        #plt.xlim([0,40])
+        #plt.ylim([0,40])
+        max_val_x = np.max(camels_strm_2006_avg)
+        max_val_y = np.max(default_strm_2006_avg)
+        max_overall = np.max([max_val_x,max_val_y])
+        plt.plot([0,max_overall],[0,max_overall],label='1:1 line')
+        plt.ylabel('Default Catchment-CN4.5 (mm/day)')
+        plt.xlabel('CAMELS (mm/day)')
+        plt.legend()
+        plt.savefig(savename_strm_2006)
+        plt.close()
+        # make the plot for 2007 streamflow
+        plt.figure()
+        plt.scatter(camels_strm_2007_avg,default_strm_2007_avg,s=2)
+        #plt.xlim([0,40])
+        #plt.ylim([0,40])
+        max_val_x = np.max(camels_strm_2007_avg)
+        max_val_y = np.max(default_strm_2007_avg)
+        max_overall = np.max([max_val_x,max_val_y])
+        plt.plot([0,max_overall],[0,max_overall],label='1:1 line')
+        plt.ylabel('Default Catchment-CN4.5 (mm/day)')
+        plt.xlabel('CAMELS (mm/day)')
+        plt.legend()
+        plt.savefig(savename_strm_2007)
+        plt.close()
+        # make the plot for 2006 and 2007 streamflow
+        plt.figure()
+        plt.scatter(camels_strm_2006_2007_avg,default_strm_2006_2007_avg,s=2)
+        #plt.xlim([0,40])
+        #plt.ylim([0,40])
+        max_val_x = np.max(camels_strm_2006_2007_avg)
+        max_val_y = np.max(default_strm_2006_2007_avg)
+        max_overall = np.max([max_val_x,max_val_y])
+        plt.plot([0,max_overall],[0,max_overall],label='1:1 line')
+        plt.ylabel('Default Catchment-CN4.5 (mm/day)')
+        plt.xlabel('CAMELS (mm/day)')
+        plt.legend()
+        plt.savefig(savename_strm_2006_2007)
+        plt.close()
+        # make the plot for 2006 le
+        plt.figure()
+        plt.scatter(fluxcom_le_2006_avg,default_le_2006_avg,s=2)
+        #plt.xlim([0,40])
+        #plt.ylim([0,40])
+        max_val_x = np.max(fluxcom_le_2006_avg)
+        max_val_y = np.max(default_le_2006_avg)
+        max_overall = np.max([max_val_x,max_val_y])
+        plt.plot([0,max_overall],[0,max_overall],label='1:1 line')
+        plt.ylabel('Default Catchment-CN4.5 (W/m2)')
+        plt.xlabel('Fluxcom (W/m2)')
+        plt.legend()
+        plt.savefig(savename_le_2006)
+        plt.close()
+        # make the plot for 2007 le
+        plt.figure()
+        plt.scatter(fluxcom_le_2007_avg,default_le_2007_avg,s=2)
+        #plt.xlim([0,40])
+        #plt.ylim([0,40])
+        max_val_x = np.max(fluxcom_le_2007_avg)
+        max_val_y = np.max(default_le_2007_avg)
+        max_overall = np.max([max_val_x,max_val_y])
+        plt.plot([0,max_overall],[0,max_overall],label='1:1 line')
+        plt.ylabel('Default Catchment-CN4.5 (W/m2)')
+        plt.xlabel('Fluxcom (W/m2)')
+        plt.legend()
+        plt.savefig(savename_le_2007)
+        plt.close()
+        # make the plot for 2006 and 2007 le
+        plt.figure()
+        plt.scatter(fluxcom_le_2006_2007_avg,default_le_2006_2007_avg,s=2)
+        #plt.xlim([0,40])
+        #plt.ylim([0,40])
+        max_val_x = np.max(fluxcom_le_2006_2007_avg)
+        max_val_y = np.max(default_le_2006_2007_avg)
+        max_overall = np.max([max_val_x,max_val_y])
+        plt.plot([0,max_overall],[0,max_overall],label='1:1 line')
+        plt.ylabel('Default Catchment-CN4.5 (W/m2)')
+        plt.xlabel('Fluxcom (W/m2)')
+        plt.legend()
+        plt.savefig(savename_le_2006_2007)
+        plt.close()
+        # make the plot for 2006 vs 2007 camels strm
+        plt.figure()
+        plt.scatter(camels_strm_2006_avg,camels_strm_2007_avg,s=2)
+        #plt.xlim([0,40])
+        #plt.ylim([0,40])
+        max_val_x = np.max(camels_strm_2006_avg)
+        max_val_y = np.max(camels_strm_2007_avg)
+        max_overall = np.max([max_val_x,max_val_y])
+        plt.plot([0,max_overall],[0,max_overall],label='1:1 line')
+        plt.ylabel('CAMELS avgerage 2006 (mm/day)')
+        plt.xlabel('CAMELS average 2007 (mm/day)')
         plt.text(
-            .03, .95,
-            'R2={:.2f},p={:.2f}'.format(r_squared,p),
-            ha='left', va='bottom'
+            5,2,'Mean percent difference: {:.2f}'.format(
+                camels_diff_strm_2006_2007
+            )
         )
-        plt.ylabel('(Catchment-CN avg. runoff) - (Waterwatch avg. runoff)')
-        plt.xlabel('LAI')
-        plt.savefig(savename)
+        plt.legend()
+        plt.savefig(savename_camels_diff_strm)
+        plt.close()
+        # make the plot for 2006 vs 2007 camels strm
+        plt.figure()
+        plt.scatter(fluxcom_le_2006_avg,fluxcom_le_2007_avg,s=2)
+        #plt.xlim([0,40])
+        #plt.ylim([0,40])
+        max_val_x = np.max(fluxcom_le_2006_avg)
+        max_val_y = np.max(fluxcom_le_2007_avg)
+        max_overall = np.max([max_val_x,max_val_y])
+        plt.plot([0,max_overall],[0,max_overall],label='1:1 line')
+        plt.ylabel('FluxCom avgerage 2006 (W/m2)')
+        plt.xlabel('FluxCom average 2007 (W/m2)')
+        plt.text(
+            40,10,'Mean percent difference: {:.2f}'.format(
+                fluxcom_diff_le_2006_2007
+            )
+        )
+        plt.legend()
+        plt.savefig(savename_fluxcom_diff_le)
         plt.close()
     def plot_maps(self,rmse_dfs,plots_dir,geojson_fname,exp_names,states_shp,
                   make_plots,plot_trim):
@@ -949,9 +1416,9 @@ class analyze_watershed:
         default_strm_nse_avg = default_strm_nse[-1]
         default_strm_nse = default_strm_nse[:-1]
         # avg prediction difference for default
-        default_strm_diff = np.array(default_df.loc['strm_diff'])
-        default_strm_diff_avg = default_strm_diff[-1]
-        default_strm_diff = default_strm_diff[:-1]
+        default_strm_avg_diff = np.array(default_df.loc['strm_avg_diff'])
+        default_strm_avg_diff_avg = default_strm_avg_diff[-1]
+        default_strm_avg_diff = default_strm_avg_diff[:-1]
         # overall rmse for firstloc
         init_strm_rmse = np.array(pso_init_df.loc['strm_rmse'])
         init_strm_rmse_avg = init_strm_rmse[-1]
@@ -1074,9 +1541,11 @@ class analyze_watershed:
         perc_diff_strm_final_avg = (
             (final_strm_avg - default_strm_avg)/default_strm_avg
         )
+        print(len(default_strm_rmse))
         if make_plots:
             # now let's get the shapes that we need for plotting
             huc6s = gpd.read_file(geojson_fname)
+            print(huc6s)
             if not plot_trim:
                 # now let's get everythin in arrays for proper plotting
                 names = [
@@ -1086,7 +1555,7 @@ class analyze_watershed:
                     'perc_diff_rmse_strm_init','perc_diff_rmse_strm_final',
                     'diff_strm_init','diff_strm_final',
                     'perc_diff_strm_init','perc_diff_strm_final',
-                    'default_strm_diff',
+                    'default_strm_avg_diff',
                     'default_strm_r2','default_strm_corr','default_strm_ubrmse',
                     'default_strm_nse','pso_strm_r2','pso_strm_corr',
                     'pso_strm_ubrmse','pso_strm_nse','diff_r2_strm_final',
@@ -1100,7 +1569,7 @@ class analyze_watershed:
                     perc_diff_rmse_strm_init,perc_diff_rmse_strm_final,
                     diff_strm_init,diff_strm_final,
                     perc_diff_strm_init,perc_diff_strm_final,
-                    default_strm_diff,
+                    default_strm_avg_diff,
                     default_strm_r2,default_strm_corr,default_strm_ubrmse,
                     default_strm_nse,final_strm_r2,final_strm_corr,
                     final_strm_ubrmse,final_strm_nse,diff_r2_strm_final,
@@ -1115,7 +1584,7 @@ class analyze_watershed:
                     perc_diff_rmse_strm_init_avg,perc_diff_rmse_strm_final_avg,
                     diff_strm_init_avg,diff_strm_final_avg,
                     perc_diff_strm_init_avg,perc_diff_strm_final_avg,
-                    default_strm_diff_avg,
+                    default_strm_avg_diff_avg,
                     default_strm_r2_avg,default_strm_corr_avg,default_strm_ubrmse_avg,
                     default_strm_nse_avg,final_strm_r2_avg,final_strm_corr_avg,
                     final_strm_ubrmse_avg,final_strm_nse_avg,diff_r2_strm_final_avg,
@@ -1148,59 +1617,40 @@ class analyze_watershed:
                 vmins = {
                     'strm_rmse':0,
                     'strm':0,
-                    'diff_strm_rmse':-35,
+                    'diff_strm_rmse':-2,
                     'perc_diff_strm_rmse':-.25,
-                    'diff_strm':-50,
+                    'diff_strm':-2,
                     'perc_diff_strm':-.25,
                     'strm_r2':0
                 }
                 vmaxs = {
-                    'strm_rmse':40,
-                    'strm':125,
-                    'diff_strm_rmse':35,
+                    'strm_rmse':2,
+                    'strm':2,
+                    'diff_strm_rmse':2,
                     'perc_diff_strm_rmse':.25,
-                    'diff_strm':50,
+                    'diff_strm':2,
                     'perc_diff_strm':.25,
                     'strm_r2':1
                 }
             if plot_trim:
                 names = [
-                    'perc_diff_rmse_strm_final',
-                    'diff_nse_strm_final',
-                    'diff_corr_strm_final',
-                    'perc_diff_ubrmse_strm_final'
+                    'pso_strm_nse'
                 ]
                 vals = [
-                    perc_diff_rmse_strm_final,
-                    diff_nse_strm_final,
-                    diff_corr_strm_final,
-                    perc_diff_ubrmse_strm_final
+                    final_strm_nse
                 ]
                 avgs = [
-                    perc_diff_rmse_strm_final_avg,
-                    diff_nse_strm_final_avg,
-                    diff_corr_strm_final_avg,
-                    perc_diff_ubrmse_strm_final_avg
+                    final_strm_nse_avg
                 ]
                 types = names
                 cmaps = {
-                    'perc_diff_rmse_strm_final':'bwr',
-                    'diff_nse_strm_final':'bwr',
-                    'diff_corr_strm_final':'bwr',
-                    'perc_diff_ubrmse_strm_final':'bwr'
+                    names[0]:'bwr'
                 }
                 vmins = {
-                    'perc_diff_rmse_strm_final':-.4,
-                    'diff_nse_strm_final':-.4,
-                    'diff_corr_strm_final':-.25,
-                    'perc_diff_ubrmse_strm_final':-.4
-
+                    names[0]:-1
                 }
                 vmaxs = {
-                    'perc_diff_rmse_strm_final':.4,
-                    'diff_nse_strm_final':.4,
-                    'diff_corr_strm_final':.25,
-                    'perc_diff_ubrmse_strm_final':.4
+                    names[0]:1
                 }
             print('reading states')
             states = gpd.read_file(states_shp)
@@ -1211,6 +1661,9 @@ class analyze_watershed:
             print('looping non conus')
             for n in non_conus:
                 states_conus = states_conus[states_conus.STUSPS != n]
+            # get a list of all the hucs
+            all_hucs = np.array(default_df.columns)
+            all_hucs = all_hucs[:-1]
             for n,name in enumerate(names):
                 print(name)
                 fig,ax = plt.subplots()
@@ -1221,25 +1674,33 @@ class analyze_watershed:
                     this_geom = states_conus['geometry'].iloc[s]
                     try:
                         xs,ys = this_geom.exterior.xy
-                        ax.fill(xs,ys,fc='none',ec='k',linewidth=.2)
+                        ax.fill(xs,ys,fc='none',ec='k',linewidth=.1)
                     except:
                         for geom in this_geom.geoms:
                             xs,ys = geom.exterior.xy
-                            ax.fill(xs,ys,fc='none',ec='k',linewidth=.2)
-                # get a list of all the hucs
-                all_hucs = list(huc6s['huc6'])
+                            ax.fill(xs,ys,fc='none',ec='k',linewidth=.1)
                 # get our normalize function for getting colors
                 norm = mpl.colors.Normalize(
                     vmin=vmins[types[n]],vmax=vmaxs[types[n]]
                 )
                 this_cmap = mpl.cm.get_cmap(cmaps[types[n]])
                 for h,huc in enumerate(all_hucs):
-                    this_geom = huc6s['geometry'].iloc[h]
-                    xs,ys = this_geom.exterior.xy
+                    idx = np.where(
+                        huc6s['hru_id'] == huc
+                    )[0][0]
+                    this_geom = huc6s['geometry'].iloc[idx]
                     this_val = vals[n][h]
                     this_val_norm = norm(this_val)
                     this_color = this_cmap(this_val_norm)
-                    ax.fill(xs,ys,fc=this_color,ec='k',linewidth=0.5)
+                    if this_geom.geom_type == 'Polygon':
+                        xs,ys = this_geom.exterior.xy
+                        ax.fill(xs,ys,fc=this_color,ec='k',linewidth=0.2)
+                    elif this_geom.geom_type == 'MultiPolygon':
+                        for this_this_geom in this_geom.geoms:
+                            xs,ys = this_this_geom.exterior.xy
+                            ax.fill(xs,ys,fc=this_color,ec='k',linewidth=0.2)
+                    else:
+                        raise IOError('Shape is not a polygon')
                 ax.text(
                     -127+2,20+4,'Average {name}: {val:.2f}'.format(
                         name=names[n],val=avgs[n]

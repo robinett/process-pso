@@ -1,11 +1,15 @@
 import sys
+sys.path.insert(0,'/shared/pso/step_1_choose_tiles')
 import pandas as pd
 import numpy as np
 import os
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 import datetime
+import geopandas as gpd
+from choose_tiles_camels import choose
 
 class analyze_pix:
     def __init__(self):
@@ -141,7 +145,7 @@ class analyze_pix:
         pft_df = pft_df.set_index('tile')
         return pft_df
     def get_rmse_dict(self,exp_names,exps_dict,fluxcom_timeseries,
-                      experiment_type):
+                      experiment_type,start_error,end_error):
         '''
         Function to generate a dictionary containing all of the RMSE
         information that we could want. For this dictionary, each key will be
@@ -151,6 +155,7 @@ class analyze_pix:
         change rmse after first iteration]
         Options for experiment_type are: 'pso','general'
         '''
+        print(fluxcom_timeseries)
         # get the pixels for this analysis
         pixels = list(fluxcom_timeseries.columns)
         # get rid of time from this list of pixels
@@ -180,6 +185,21 @@ class analyze_pix:
         default_infil = default_dict['infil']
         default_runoff = default_dict['runoff']
         default_baseflow = default_dict['baseflow']
+        times = list(default_le.index)
+        times = pd.to_datetime(times)
+        # let's see where is our start and end idx
+        for t,ti in enumerate(times):
+            if ti.date() == start_error:
+                start_idx = t
+            if ti.date() == end_error:
+                end_idx = t
+        default_le = default_le.iloc[start_idx:end_idx+1]
+        default_ave_sm = default_ave_sm.iloc[start_idx:end_idx+1]
+        default_root_sm = default_root_sm.iloc[start_idx:end_idx+1]
+        default_surf_sm = default_surf_sm.iloc[start_idx:end_idx+1]
+        default_infil = default_infil.iloc[start_idx:end_idx+1]
+        default_runoff = default_runoff.iloc[start_idx:end_idx+1]
+        default_baseflow = default_baseflow.iloc[start_idx:end_idx+1]
         # and take the averages of these variables that we care about
         ave_le = list(default_le.mean())
         ave_ave_sm = list(default_ave_sm.mean())
@@ -205,6 +225,21 @@ class analyze_pix:
         default_df.loc['ave_baseflow'] = ave_baseflow
         # now let's calculate rmse as compared to fluxcom
         fluxcom_timeseries = fluxcom_timeseries.set_index('time')
+        fluxcom_times_str = list(fluxcom_timeseries.index)
+        fluxcom_times = [
+            datetime.datetime.strptime(
+                d,'%Y-%m-%d'
+            ) for d in fluxcom_times_str
+        ]
+        # let's see where is our start and end idx
+        for t,ti in enumerate(fluxcom_times):
+            if ti.date() == start_error:
+                fluxcom_start_idx = t
+            if ti.date() == end_error:
+                fluxcom_end_idx = t
+        fluxcom_timeseries = fluxcom_timeseries.iloc[
+            fluxcom_start_idx:fluxcom_end_idx+1
+        ]
         # to hold all rmse
         default_all_le_rmse = np.zeros(len(this_cols))
         default_all_le_r2 = np.zeros(len(this_cols))
@@ -392,6 +427,7 @@ class analyze_pix:
         fluxcom_le_means.append(np.nanmean(fluxcom_le_means))
         fluxcom_df = pd.DataFrame(columns=this_cols)
         fluxcom_df.loc['ave_le'] = fluxcom_le_means
+        default_df.loc['le_obs'] = fluxcom_le_means
         # add lat and lon for plotting purposes later
         # get lats and lons
         all_lats = default_dict['lat']
@@ -420,10 +456,12 @@ class analyze_pix:
         # first extract the information for the pso experiment
         pso_dict = exps_dict[exp_names[2]]
         pso_le = pso_dict['le']
+        pso_le = pso_le.iloc[start_idx:end_idx+1]
         # let's get the average le
         ave_le = list(pso_le.mean())
         ave_le.append(np.mean(ave_le))
         pso_df.loc['ave_le'] = ave_le
+        pso_df.loc['le_obs'] = fluxcom_le_means
         # to hold all rmse
         pso_all_le_rmse = np.zeros(len(this_cols))
         pso_all_le_r2 = np.zeros(len(this_cols))
@@ -589,9 +627,11 @@ class analyze_pix:
         pso_df.loc['le_ubrmse'] = pso_all_le_ubrmse
         # calculate what percent change in rmse this is compared to the first
         # iteration
+        change_le_rmse = pso_all_le_rmse - default_all_le_rmse
         perc_change_le_rmse = (
             (pso_all_le_rmse - default_all_le_rmse)/default_all_le_rmse
         )
+        pso_df.loc['change_le_rmse'] = change_le_rmse
         pso_df.loc['perc_change_le_rmse'] = perc_change_le_rmse
         change_le_r2 = pso_all_le_r2 - default_all_le_r2
         change_le_corr = pso_all_le_corr - default_all_le_corr
@@ -607,6 +647,7 @@ class analyze_pix:
         # get information
         first_it_dict = exps_dict[exp_names[1]]
         first_it_le = first_it_dict['le']
+        first_it_le = first_it_le.iloc[start_idx:end_idx+1]
         # let's get the average le for this first iteration
         ave_le = list(first_it_le.mean())
         ave_le.append(np.mean(ave_le))
@@ -669,10 +710,14 @@ class analyze_pix:
         return [default_df,pso_df,fluxcom_df]
     def plot_le_timeseries(self,exp_names,catch_timeseries,fluxcom_timeseries,
                            plots_dir):
+        #print(catch_timeseries[exp_names[0]])
+        #sys.exit()
         default_timeseries_le = catch_timeseries[exp_names[0]]['le']
-        first_it_timeries_le = catch_timeseries[exp_names[1]]['le']
+        first_it_timeseries_le = catch_timeseries[exp_names[1]]['le']
         final_it_timeseries_le = catch_timeseries[exp_names[2]]['le']
+        #default_timeseries_temp = catch_timeseries[exp_names[0]]['tair']
         fluxcom_timeseries = fluxcom_timeseries.set_index('time')
+        #tdefault_timeseries_q = catch_timeseries[exp_names[0]]['qair']
         times = list(default_timeseries_le.index)
         pixels = list(default_timeseries_le.columns)
         times_str = [str(t) for t in times]
@@ -683,34 +728,113 @@ class analyze_pix:
         for p,pix in enumerate(pixels):
             print('plotting et timeseries for pixel {}'.format(pix))
             this_default = default_timeseries_le[pix]
-            this_first_it = first_it_timeries_le[pix]
+            this_first_it = first_it_timeseries_le[pix]
             this_final_it = final_it_timeseries_le[pix]
             this_fluxcom = fluxcom_timeseries[pix]
+            this_times = np.array(this_fluxcom.index)
             this_savename = os.path.join(
-                plots_dir,'le_timeseries_{}_{}.png'.format(this_exp,pix)
+                plots_dir,'le_timeseries_{}_{}.png'.format(
+                    this_exp,pix
+                )
             )
             plt.figure()
             plt.plot(
-                dates_dtm,this_default,label='Default Catchment-CN',
-                c='r'
+                dates_dtm,this_default,label='CN4.5 Medlyn g1=PFT default',
+                c='r',linewidth=.8
             )
             plt.plot(
                 dates_dtm,this_fluxcom,label='FluxCom',
-                c='k'
+                c='k',linewidth=.8
             )
             plt.plot(
-                dates_dtm,this_first_it,label='PSO Init Catchment-CN',
-                c='y'
+                dates_dtm,this_first_it,label='CN4.5 PSO Init.',
+                c='y',linewidth=.8
             )
             plt.plot(
-                dates_dtm,this_final_it,label='PSO Final Catchment-CN',
-                c='g'
+                dates_dtm,this_final_it,label='CN4.5 Medlyn g1=EF+PSO',
+                c='g',linewidth=.8
             )
             plt.legend()
             plt.xlabel('Date')
             plt.ylabel('LE (W/m2)')
             plt.savefig(this_savename,dpi=300,bbox_inches='tight')
             plt.close()
+            start_2010 = datetime.date(2010,1,1)
+            start_2010_str = datetime.datetime.strftime(start_2010,'%Y-%m-%d')
+            end_2012 = datetime.date(2012,12,31)
+            end_2012_str = datetime.datetime.strftime(end_2012,'%Y-%m-%d')
+            start_idx = np.where(this_times == start_2010_str)[0][0]
+            end_idx = np.where(this_times == end_2012_str)[0][0]
+            this_default_2010_2012 = default_timeseries_le[pix].iloc[
+                start_idx:end_idx+1
+            ]
+            this_first_it_2010_2012 = first_it_timeseries_le[pix].iloc[
+                start_idx:end_idx+1
+            ]
+            this_final_it_2010_2012 = final_it_timeseries_le[pix].iloc[
+                start_idx:end_idx+1
+            ]
+            this_fluxcom_2010_2012 = fluxcom_timeseries[pix].iloc[
+                start_idx:end_idx+1
+            ]
+            dates_dtm_2010_2012 = dates_dtm[start_idx:end_idx+1]
+            this_savename = os.path.join(
+                plots_dir,'le_timeseries_2010_2012_{}_{}'.format(
+                    this_exp,pix
+                )
+            )
+            plt.figure()
+            plt.plot(
+                dates_dtm_2010_2012,this_default_2010_2012,label='CN4.5 Medlyn g1=PFT default',
+                c='r',linewidth=.8
+            )
+            plt.plot(
+                dates_dtm_2010_2012,this_fluxcom_2010_2012,label='FluxCom',
+                c='k',linewidth=.8
+            )
+            plt.plot(
+                dates_dtm_2010_2012,this_first_it_2010_2012,label='CN4.5 PSO Init.',
+                c='y',linewidth=.8
+            )
+            plt.plot(
+                dates_dtm_2010_2012,this_final_it_2010_2012,label='CN4.5 Medlyn g1=EF+PSO',
+                c='g',linewidth=.8
+            )
+            plt.legend()
+            plt.xlabel('Date')
+            plt.ylabel('LE (W/m2)')
+            plt.savefig(this_savename,dpi=300,bbox_inches='tight')
+            plt.close()
+        #for p,pix in enumerate(pixels):
+        #    print('plotting tair timeseries for pixel {}'.format(pix))
+        #    this_default = default_timeseries_temp[pix]
+        #    this_savename = os.path.join(
+        #        plots_dir,'tair_timeseries_{}_{}.png'.format(this_exp,pix)
+        #    )
+        #    plt.figure()
+        #    plt.plot(
+        #        dates_dtm,this_default,
+        #        c='r',linewidth=.8
+        #    )
+        #    plt.xlabel('Date')
+        #    plt.ylabel('temperature')
+        #    plt.savefig(this_savename,dpi=300,bbox_inches='tight')
+        #    plt.close()
+        #for p,pix in enumerate(pixels):
+        #    print('plotting q timeseries for pixel {}'.format(pix))
+        #    this_default = default_timeseries_q[pix]
+        #    this_savename = os.path.join(
+        #        plots_dir,'q_timeseries_{}_{}.png'.format(this_exp,pix)
+        #    )
+        #    plt.figure()
+        #    plt.plot(
+        #        dates_dtm,this_default,
+        #        c='r',linewidth=.8
+        #    )
+        #    plt.xlabel('Date')
+        #    plt.ylabel('Q')
+        #    plt.savefig(this_savename,dpi=300,bbox_inches='tight')
+        #    plt.close()
     def plot_pso_maps(self,exp_names,default_df,pso_df,plots_dir,
                       plot_trim,extent='conus'
                      ):
@@ -766,6 +890,9 @@ class analyze_pix:
         # difference in le between fluxcom and average
         diff_le_default = default_df.loc['ave_le_diff']
         avg_diff_le_default = diff_le_default['all']
+        # difference in le between fluxcom and PSO
+        diff_le_pso = pso_df.loc['ave_le_diff']
+        avg_diff_le_pso = diff_le_pso['all']
         # combine all relevant information into lists to be plotted:
             # exps are the name of the experiments
             # vals are the values of the actual poitns
@@ -777,13 +904,15 @@ class analyze_pix:
             exps = [
                 exp_names[0],exp_names[2],exp_names[1],exp_names[2],exp_names[1],
                 exp_names[0],exp_names[0],exp_names[0],exp_names[2],exp_names[2],
-                exp_names[2],exp_names[2],exp_names[2],exp_names[2],exp_names[2]
+                exp_names[2],exp_names[2],exp_names[2],exp_names[2],exp_names[2],
+                exp_names[2]
             ]
             vals = [
                 default_le_rmse,pso_le_rmse,pso_first_it_le_rmse,perc_change_le_rmse,
                 perc_change_le_rmse_first_it,diff_le_default,default_le_r2,
                 default_le_corr,pso_le_r2,pso_le_corr,change_le_r2,change_le_corr,
-                default_le_ubrmse,pso_le_ubrmse,perc_change_le_ubrmse
+                default_le_ubrmse,pso_le_ubrmse,perc_change_le_ubrmse,
+                diff_le_pso
             ]
             avgs = [
                 avg_default_le_rmse,avg_pso_le_rmse,avg_pso_first_it_le_rmse,
@@ -792,7 +921,7 @@ class analyze_pix:
                 avg_default_le_r2,avg_default_le_corr,avg_pso_le_r2,
                 avg_pso_le_corr,avg_change_le_r2,avg_change_le_corr,
                 avg_default_le_rmse,avg_pso_le_ubrmse,
-                avg_perc_change_le_ubrmse
+                avg_perc_change_le_ubrmse,avg_diff_le_pso
             ]
             names = [
                 'default_le_rmse','pso_le_rmse','pso_first_it_le_rmse',
@@ -800,13 +929,13 @@ class analyze_pix:
                 'diff_le_default','default_le_r2','default_le_corr',
                 'pso_le_r2','pso_le_corr','change_le_r2','change_le_corr',
                 'default_le_ubrmse','pso_le_ubrmse',
-                'perc_change_le_ubrmse'
+                'perc_change_le_ubrmse','diff_le_pso'
             ]
             types = [
                 'le_rmse','le_rmse','le_rmse','le_perc_change','le_perc_change',
                 'le_diff','le_perc_change','le_perc_change','le_perc_change',
                 'le_perc_change','le_perc_change','le_perc_change',
-                'le_rmse','le_rmse','le_perc_change'
+                'le_rmse','le_rmse','le_perc_change','le_diff'
             ]
             cmaps = {
                 'le_rmse':'winter',
@@ -1033,7 +1162,7 @@ class analyze_pix:
             plt.savefig(savename)
         print('created scatter plots')
     def plot_general_comparison_maps(self,exp_names,default_df,exp_df,plots_dir,
-                                     extent='conus'
+                                     tile_gdf_fname,pixel_error_gdf_fname,extent='conus'
                                     ):
         # define the lats and lons for the points
         lons = default_df.loc['lon']
@@ -1115,9 +1244,13 @@ class analyze_pix:
         avg_norm_diff_baseflow_runoff_runs = norm_diff_baseflow_runoff_runs[
             'all'
         ]
+        # let's convert mm/day for this presentation
+        diff_le_rmse_runs_mm_day = diff_le_rmse_runs/28.94
+        avg_diff_le_rmse_runs_mm_day = diff_le_rmse_runs_mm_day['all']
         # put values to be plotted into list for plotting
         vals = [
-            diff_le_runs,diff_le_rmse_runs,diff_ave_sm_runs,
+            diff_le_runs,diff_le_rmse_runs,
+            diff_le_rmse_runs_mm_day,diff_ave_sm_runs,
             diff_root_sm_runs,diff_surf_sm_runs,diff_infil_runs,diff_runoff_runs,
             diff_baseflow_runs,perc_diff_le_runs,
             perc_diff_le_rmse,perc_diff_ave_sm_runs,
@@ -1127,7 +1260,8 @@ class analyze_pix:
         ]
         # put the averages that correspond to these values
         avgs = [
-            avg_diff_le_runs,avg_diff_le_rmse_runs,avg_diff_ave_sm_runs,
+            avg_diff_le_runs,avg_diff_le_rmse_runs,
+            avg_diff_le_rmse_runs_mm_day,avg_diff_ave_sm_runs,
             avg_diff_root_sm_runs,avg_diff_surf_sm_runs,
             avg_diff_infil_runs,avg_diff_runoff_runs,
             avg_diff_baseflow_runs,avg_perc_diff_le_runs,
@@ -1140,7 +1274,8 @@ class analyze_pix:
         ]
         # put the name the corresponds to each of these values
         names = [
-            'diff_le','diff_le_rmse','diff_ave_sm','diff_root_sm','diff_surf_sm',
+            'diff_le','diff_le_rmse',
+            'diff_le_rmse_mm_day','diff_ave_sm','diff_root_sm','diff_surf_sm',
             'diff_infil',
             'diff_runoff','diff_baseflow','perc_diff_le_runs',
             'perc_diff_le_rmse',
@@ -1161,7 +1296,8 @@ class analyze_pix:
             print('go back and correct this!')
             sys.exit()
         types = [
-            'le_diff','le_rmse','sm_diff','sm_diff',
+            'le_diff','le_rmse_diff',
+            'le_rmse_diff_mm_day','sm_diff','sm_diff',
             'sm_diff','flow_diff','flow_diff','flow_diff',
             'perc_diff_le','perc_diff_le_rmse',
             'perc_diff_sm','perc_diff_sm','perc_diff_sm',
@@ -1170,7 +1306,8 @@ class analyze_pix:
         ]
         cmaps = {
             'le_diff':'bwr',
-            'le_rmse':'winter',
+            'le_rmse_diff':'bwr',
+            'le_rmse_diff_mm_day':'PiYG_r',
             'sm_diff':'bwr',
             'flow_diff':'bwr',
             'perc_diff_le':'bwr',
@@ -1180,7 +1317,8 @@ class analyze_pix:
         }
         vmins = {
             'le_diff':-20,
-            'le_rmse':0,
+            'le_rmse_diff':-20,
+            'le_rmse_diff_mm_day':-.75,
             'sm_diff':-.5,
             'flow_diff':-0.00005,
             'perc_diff_le':-0.3,
@@ -1190,7 +1328,8 @@ class analyze_pix:
         }
         vmaxs = {
             'le_diff':20,
-            'le_rmse':50,
+            'le_rmse_diff':20,
+            'le_rmse_diff_mm_day':.75,
             'sm_diff':.5,
             'flow_diff':0.00005,
             'perc_diff_le':0.3,
@@ -1198,6 +1337,35 @@ class analyze_pix:
             'perc_diff_sm':0.75,
             'perc_diff_flow':0.75
         }
+        # lets save all of these things to a geopandas for nice use wiht qgis
+        tile_gdf = gpd.read_file(
+            tile_gdf_fname
+        )
+        print('min of gdf:')
+        print(np.min(diff_le_rmse_runs_mm_day))
+        print('max of gdf:')
+        print(np.max(diff_le_rmse_runs_mm_day))
+        tile_gdf['err'] = np.array(diff_le_rmse_runs_mm_day)[:-1]
+        norm = mpl.colors.Normalize(
+            vmin=vmins['le_rmse_diff_mm_day'],vmax=vmaxs['le_rmse_diff_mm_day']
+        )
+        this_cmap = mpl.cm.get_cmap(cmaps['le_rmse_diff_mm_day'])
+        this_vals_norm = norm(np.array(diff_le_rmse_runs_mm_day)[:-1])
+        this_colors = this_cmap(this_vals_norm)
+        this_colors[:,:-1] = this_colors[:,:-1]*255
+        this_colors_str = []
+        #for c in range(np.shape(this_colors)[0]):
+        #    this_str = '{} {} {}'.format(
+        #        round(this_colors[c][0]),
+        #        round(this_colors[c][1]),
+        #        round(this_colors[c][2])
+        #    )
+        #    this_colors_str.append(this_str)
+        tile_gdf['err_r'] = this_colors[:,0]
+        tile_gdf['err_g'] = this_colors[:,1]
+        tile_gdf['err_b'] = this_colors[:,2]
+        ch = choose()
+        ch.save_gdf(tile_gdf,pixel_error_gdf_fname)
         for p in range(len(vals)):
             # let's first plot the rmse of default experiment versus fluxcom
             # create the figure and set the projection

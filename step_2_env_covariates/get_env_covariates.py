@@ -23,7 +23,8 @@ class get_covariates:
         tiles_idx = tiles - 1
         self.tiles_idx = tiles_idx
         return tiles
-    def get_soil_info(self,fname,save_ksat,save_sand):
+    def get_soil_info(self,fname,save_ksat,save_ksat_normal,save_sand,
+                      save_sand_normal):
         '''
         Load soil texture data and returns data at selected tiles
         '''
@@ -64,6 +65,20 @@ class get_covariates:
         )
         print(ksat_df)
         ksat_df.to_netcdf(save_ksat)
+        # lets make a standardized df
+        ksat_normal_array = np.array(soil_df['k_sat'].loc[self.tiles])
+        ksat_max = np.max(ksat_normal_array)
+        ksat_normal_array = ksat_normal_array/ksat_max
+        ksat_normal_df = xr.Dataset(
+            data_vars=dict(
+                k_sat_norm=(['tile_num'],ksat_normal_array)
+            ),
+            coords=dict(
+                tile=(['tile_num'],self.tiles)
+            )
+        )
+        print(ksat_normal_df)
+        ksat_normal_df.to_netcdf(save_ksat_normal)
         # save sand fraction to nc4 to be used by pso
         sand_array = np.array(soil_df['sand_perc_root'].loc[self.tiles])
         sand_df = xr.Dataset(
@@ -76,8 +91,22 @@ class get_covariates:
         )
         print(sand_df)
         sand_df.to_netcdf(save_sand)
-
-    def get_env_info(self,start,end,generic_fname,save_precip,save_lai):
+        # normalized array for sand
+        sand_normal_array = np.array(soil_df['sand_perc_root'].loc[self.tiles])
+        sand_max = np.max(sand_normal_array)
+        sand_normal_array = sand_normal_array/sand_max
+        sand_normal_df = xr.Dataset(
+            data_vars=dict(
+                sand_perc_norm=(['tile_num'],sand_normal_array)
+            ),
+            coords=dict(
+                tile=(['tile_num'],self.tiles)
+            )
+        )
+        print(sand_normal_df)
+        sand_normal_df.to_netcdf(save_sand_normal)
+    def get_env_info(self,start,end,generic_fname,save_precip,
+                     save_precip_norm,save_lai):
         # first get the static covariates needed for Ksat EF
         # this is sand fraction and ksat from only textural effects (default)
 
@@ -105,6 +134,9 @@ class get_covariates:
             this_ds = nc.Dataset(
                 generic_fname.format(year=this_year,month=this_month)
             )
+            #for var in this_ds.variables:
+            #    print(this_ds[var].long_name)
+            #sys.exit()
             # turn vals of interest into an np array
             precip = np.array(this_ds['PRECTOTLAND'])[0]
             lai = np.array(this_ds['LAI'])[0]
@@ -138,6 +170,20 @@ class get_covariates:
         )
         print(precip_df)
         precip_df.to_netcdf(save_precip)
+        # and precip normalized
+        norm_precip = np.copy(avg_precip)
+        max_precip = np.max(norm_precip)
+        norm_precip = norm_precip/max_precip
+        norm_precip_df = xr.Dataset(
+            data_vars=dict(
+                norm_precip=(['tile_num'],norm_precip)
+            ),
+            coords=dict(
+                tile=(['tile_num'],self.tiles)
+            )
+        )
+        print(norm_precip_df)
+        norm_precip_df.to_netcdf(save_norm)
         # and now for lai
         lai_df = xr.Dataset(
             data_vars=dict(
@@ -149,4 +195,87 @@ class get_covariates:
         )
         print(lai_df)
         lai_df.to_netcdf(save_lai)
+    def get_gldas_info(self,start,end,fname,save_name,save_name_norm):
+        this_data = pd.read_csv(fname)
+        this_data = this_data.set_index('time')
+        tiles_data = np.array(this_data.columns)
+        tiles_times = np.array(this_data.index)
+        start = start.astype(datetime.date)
+        start_str = datetime.datetime.strftime(start,'%Y-%m-%d')
+        start_idx = np.where(
+            tiles_times == start_str
+        )[0][0]
+        end = end.astype(datetime.date)
+        if end.day != 1:
+            end = datetime.date(end.year,end.month,1)
+        end_str = datetime.datetime.strftime(end,'%Y-%m-%d')
+        end_idx = np.where(
+            tiles_times == end_str
+        )[0][0]
+        this_data = this_data.iloc[start_idx:end_idx+1]
+        averaged_data = pd.DataFrame(columns=self.tiles)
+        averaged_data.loc['average'] = np.zeros(
+            len(self.tiles)
+        )
+        for t,ti in enumerate(self.tiles):
+            this_tile_info = np.array(this_data[str(ti)])
+            this_avg = np.average(this_tile_info)
+            averaged_data[ti].loc['average'] = this_avg
+        var_array = np.array(averaged_data[self.tiles].loc['average'])
+        var_ds = xr.Dataset(
+            data_vars=dict(
+                vals=(['tile_num'],var_array)
+            ),
+            coords=dict(
+                tile=(['tile_num'],self.tiles)
+            )
+        )
+        print(var_ds)
+        var_ds.to_netcdf(save_name)
+        norm_var_array = np.copy(var_array)
+        max_var = np.max(norm_var_array)
+        norm_var_array = norm_var_array/max_var
+        norm_var_ds = xr.Dataset(
+            data_vars=dict(
+                vals=(['tile_num'],norm_var_array)
+            ),
+            coords=dict(
+                tile=(['tile_num'],self.tiles)
+            )
+        )
+        print(norm_var_ds)
+        norm_var_ds.to_netcdf(save_name_norm)
+    def get_canopy_info(self,fname,save_name,save_name_norm):
+        canopy_data = pd.read_csv(fname)
+        canopy_data = canopy_data.set_index('time')
+        tiles_str = [
+            str(t) for t in self.tiles
+        ]
+        val_array = np.array(canopy_data[tiles_str].loc['static'])
+        canopy_ds = xr.Dataset(
+            data_vars=dict(
+                vals=(['tile_num'],val_array)
+            ),
+            coords=dict(
+                tile=(['tile_num'],self.tiles)
+            )
+        )
+        print(canopy_ds)
+        canopy_ds.to_netcdf(save_name)
+        # normalize and save
+        val_array_norm = np.copy(val_array)
+        val_max = np.max(val_array_norm)
+        val_array_norm = val_array_norm/val_max
+        norm_canopy_ds = xr.Dataset(
+            data_vars=dict(
+                vals=(['tile_num'],val_array_norm)
+            ),
+            coords=dict(
+                tile=(['tile_num'],self.tiles)
+            )
+        )
+        print(norm_canopy_ds)
+        norm_canopy_ds.to_netcdf(save_name_norm)
+
+
 

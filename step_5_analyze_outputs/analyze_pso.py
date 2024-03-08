@@ -6,6 +6,7 @@ import os
 import netCDF4 as nc
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
+from scipy import stats
 
 class analyze_pso:
     def __init__(self):
@@ -27,15 +28,15 @@ class analyze_pso:
             #'ksat_const_2',
             #'ksat_sand_exp'
             'g1_a1_forests',
-            'g1_a1_croplands',
-            'g1_a1_grasslands',
-            'g1_a1_savannas',
             'g1_a1_shrublands',
+            'g1_a1_savannas',
+            'g1_a1_grasslands',
+            'g1_a1_croplands'
             'g1_a0_forests',
-            'g1_a0_croplands',
-            'g1_a0_grasslands',
+            'g1_a0_shrublands',
             'g1_a0_savannas',
-            'g1_a0_shrublands'
+            'g1_a0_grasslands',
+            'g1_a0_croplands'
         ]
         return parameter_names
     def plot_parameter_convergence(self,all_info,parameter_names,plots_dir,
@@ -52,7 +53,7 @@ class analyze_pso:
                     iterations[t] = this_iter
         # for each of these iterations, get the parameter values
         ex_params = all_info['iteration_1']['positions']
-        num_params,num_particles = np.shape(ex_params)
+        num_particles,num_params = np.shape(ex_params)
         all_particles = np.arange(num_particles)
         all_positions = np.zeros((num_iterations,num_particles,num_params))
         all_obj = np.zeros((num_iterations,num_particles))
@@ -94,7 +95,8 @@ class analyze_pso:
         plt.savefig(this_savename)
         plt.close()
     def plot_parameter_maps(self,all_info,tiles,precip_fname,lai_fname,sand_fname,
-                            k0_fname,pft_info,default_df,plots_dir,exp_names):
+                            k0_fname,pft_info,default_df,plots_dir,exp_names,
+                            all_info_compare='none'):
         this_exp_name = exp_names[2]
         # get env covariates maps
         precip_ds = nc.Dataset(precip_fname)
@@ -137,6 +139,53 @@ class analyze_pso:
         )
         plt.savefig(savename)
         plt.close()
+        # let's make a scatter plot of precip values versus default model RMSE
+        # to see if they co-vary
+        print(default_df)
+        model_rmse = np.array(default_df.loc['le_rmse'])
+        model_rmse = model_rmse[:-1]
+        rmse_slope,rmse_intercept,rmse_r_value,na,nan = (
+            stats.linregress(precip_vals,model_rmse)
+        )
+        model_bias = np.array(default_df.loc['ave_le_diff'])
+        model_bias = model_bias[:-1]
+        bias_slope,bias_intercept,bias_r_value,na,nan = (
+            stats.linregress(precip_vals,model_bias)
+        )
+        precip_save_name = os.path.join(
+            plots_dir,
+            'scatter_precip_vals_vs_default_catchmentcn45_le_rmse.png'
+        )
+        precip_bias_save_name = os.path.join(
+            plots_dir,
+            'scatter_precip_vals_vs_default_catchmentcn45_le_bias.png'
+        )
+        plt.figure()
+        plt.scatter(precip_vals,model_rmse,s=1)
+        plt.plot(
+            precip_vals,
+            rmse_intercept+rmse_slope*precip_vals,
+            label='best fit line'
+        )
+        plt.text(200,35,'r = {:.2f}'.format(rmse_r_value))
+        plt.xlabel('mean annual precipitation (mm/month)')
+        plt.ylabel('Catchment-CN4.5 LE RMSE 2007 (W/m2)')
+        plt.legend()
+        plt.savefig(precip_save_name)
+        plt.close()
+        plt.figure()
+        plt.scatter(precip_vals,model_bias,s=1)
+        plt.plot(
+            precip_vals,
+            bias_intercept+bias_slope*precip_vals,
+            label='best fit line'
+        )
+        plt.text(200,35,'r = {:.2f}'.format(bias_r_value))
+        plt.xlabel('mean annual precipitation (mm/month)')
+        plt.ylabel('Catchment-CN4.5 LE bias 2007 (W/m2)')
+        plt.legend()
+        plt.savefig(precip_bias_save_name)
+        plt.close()
         # get the global best parameters from the PSO
         iteration_keys = list(all_info.keys())
         this_it_key = iteration_keys[-1]
@@ -144,18 +193,58 @@ class analyze_pso:
         # assign these positions to their relevant variables
         a1_g1_dict = {
             'Forest':best_positions[0],
-            'Croplands':best_positions[1],
-            'Grasslands':best_positions[2],
-            'Savannas':best_positions[3],
-            'Shrublands':best_positions[4]
+            'Shrublands':best_positions[1],
+            'Savannas':best_positions[2],
+            'Grasslands':best_positions[3],
+            'Croplands':best_positions[4]
         }
         a0_g1_dict = {
             'Forest':best_positions[5],
-            'Croplands':best_positions[6],
-            'Grasslands':best_positions[7],
-            'Savannas':best_positions[8],
-            'Shrublands':best_positions[9]
+            'Shrublands':best_positions[6],
+            'Savannas':best_positions[7],
+            'Grasslands':best_positions[8],
+            'Croplands':best_positions[9]
         }
+        default_g1_dict = {
+            'Needleleaf evergreen temperate tree':2.3,
+            'Needleleaf evergreen boreal tree':2.3,
+            'Needleleaf deciduous boreal tree':2.3,
+            'Broadleaf evergreen tropical tree':4.1,
+            'Broadleaf evergreen temperate tree':4.1,
+            'Broadleaf deciduous tropical tree':4.4,
+            'Broadleaf deciduous temperate tree':4.4,
+            'Broadleaf deciduous boreal tree':4.4,
+            'Broadleaf evergreen temperate shrub':4.7,
+            'Broadleaf deciduous boreal shrub':4.7,
+            'Broadleaf deciduous temperate shrub':4.7,
+            'Broadleaf deciduous temperate shrub[moisture + deciduous]':4.7,
+            'Broadleaf deciduous temperate shrub[moisture stress only]':4.7,
+            'Arctic c3 grass':2.2,
+            'Cool c3 grass':5.3,
+            'Cool c3 grass [moisture + deciduous]':5.3,
+            'Cool c3 grass [moisture stress only]':5.3,
+            'Warm c4 grass [moisture + deciduous]':1.6,
+            'Warm c4 grass [moisture stress only]':1.6,
+            'Warm c4 grass':1.6,
+            'Crop':5.79,
+            'Crop [moisture + deciduous]':5.79,
+            'Crop [moisture stress only]':5.79,
+            '(Spring temperate cereal)':5.79,
+            '(Irrigated corn)':5.79,
+            '(Soybean)':5.79,
+            '(Corn)':5.79
+        }
+        if all_info_compare != 'none':
+            best_positions_compare = (
+                all_info_compare[this_it_key]['global_best_positions']
+            )
+            aj_g1_dict = {
+                'Forest':best_positions_compare[0],
+                'Shrublands':best_positions_compare[1],
+                'Savannas':best_positions_compare[2],
+                'Grasslands':best_positions_compare[3],
+                'Croplands':best_positions_compare[4]
+            }
         #ksat_alpha = best_positions[5]
         ksat_alpha = 4.5
         #ksat_beta = best_positions[6]
@@ -176,11 +265,31 @@ class analyze_pso:
             (ks_max - k0_vals)/(1 + ((lai_vals/ksat_alpha)**ksat_beta))
         )
         # then for default g1
-        default_g1 = np.repeat(4,len(precip_vals))
+        default_g1_init = np.zeros(len(precip_vals))
+        default_g1 = np.zeros(len(default_g1_init))
+        for g,g1 in enumerate(default_g1_init):
+            this_perc = [
+                pft_info['pft_1_perc'].loc[tiles[g]],
+                pft_info['pft_2_perc'].loc[tiles[g]],
+                pft_info['pft_3_perc'].loc[tiles[g]],
+                pft_info['pft_4_perc'].loc[tiles[g]]
+            ]
+            this_pfts = [
+                pft_info['pft_1_name'].loc[tiles[g]],
+                pft_info['pft_2_name'].loc[tiles[g]],
+                pft_info['pft_3_name'].loc[tiles[g]],
+                pft_info['pft_4_name'].loc[tiles[g]]
+            ]
+            effective_g1 = 0
+            for p,perc in enumerate(this_perc):
+                effective_g1 += (perc/100)*default_g1_dict[this_pfts[p]]
+            default_g1[g] = effective_g1
         # then for pso g1
         #pso_g1_init = -0.163747 + 0.025*precip_vals
         pso_g1_init = precip_vals
         pso_g1 = np.zeros(len(pso_g1_init))
+        int_term = np.zeros(len(pso_g1_init))
+        slope_term = np.zeros(len(pso_g1_init))
         for g,g1 in enumerate(pso_g1_init):
             this_perc = [
                 pft_info['pft_1_perc'].loc[tiles[g]],
@@ -200,7 +309,32 @@ class analyze_pso:
                 effective_a1 += (perc/100)*a1_g1_dict[this_pfts[p]]
                 effective_a0 += (perc/100)*a0_g1_dict[this_pfts[p]]
             pso_g1[g] = effective_a0 + effective_a1*g1
-            #pso_g1[g] = effective_aj
+            #pso_g1[g] = effective_a1
+            int_term[g] = effective_a0
+            slope_term[g] = effective_a1*g1
+        if all_info_compare != 'none':
+            compare_g1_init = precip_vals
+            compare_g1 = np.zeros(len(compare_g1_init))
+            for g,g1 in enumerate(compare_g1_init):
+                this_perc = [
+                    pft_info['pft_1_perc'].loc[tiles[g]],
+                    pft_info['pft_2_perc'].loc[tiles[g]],
+                    pft_info['pft_3_perc'].loc[tiles[g]],
+                    pft_info['pft_4_perc'].loc[tiles[g]]
+                ]
+                this_pfts = [
+                    pft_info['pft_1_simple'].loc[tiles[g]],
+                    pft_info['pft_2_simple'].loc[tiles[g]],
+                    pft_info['pft_3_simple'].loc[tiles[g]],
+                    pft_info['pft_4_simple'].loc[tiles[g]]
+                ]
+                effective_aj = 0
+                for p,perc in enumerate(this_perc):
+                    effective_aj += (perc/100)*aj_g1_dict[this_pfts[p]]
+                compare_g1[g] = effective_aj
+            pso_g1 = np.where(pso_g1 < 0.5, 0.5, pso_g1)
+            compare_g1 = np.where(compare_g1 < 0.5, 0.5, compare_g1)
+            compare_g1_diff = pso_g1 - compare_g1
         # make a histogram of the default ksat versus final ksat
         bins = np.arange(0,0.001+0.00005,0.00005)
         plt.figure()
@@ -234,23 +368,23 @@ class analyze_pso:
         lons = lons.drop(labels=['all'])
         lats = default_df.loc['lat']
         lats = lats.drop(labels=['all'])
-        print(pso_g1)
-        print(np.max(pso_g1))
         # what are we plotting in each of these maps?
         names = [
             'default_g1','pso_g1','default_ksat','pso_ksat',
             'diff_g1','diff_pso_ksat','diff_bonetti_ksat',
             'perc_diff_bonetti_ksat','perc_diff_pso_g1',
-            'perc_diff_pso_ksat'
+            'perc_diff_pso_ksat','intercept_term_map',
+            'slope_term_map','pso_ef_g1_vs_pso_pft_g1'
         ]
         vals = [
             default_g1,pso_g1,default_ksat,pso_ksat,diff_pso_g1,diff_pso_ksat,
             diff_bonetti_ksat,perc_diff_bonetti_ksat,
-            perc_diff_pso_g1,perc_diff_pso_ksat
+            perc_diff_pso_g1,perc_diff_pso_ksat,int_term,slope_term,
+            compare_g1_diff
         ]
         plot_type = [
             'g1','g1','ksat','ksat','diff_g1','diff_ksat','diff_ksat',
-            'perc_diff','perc_diff','perc_diff'
+            'perc_diff','perc_diff','perc_diff','g1','g1','diff_g1'
         ]
         cmaps = {
             'g1':'winter',
@@ -262,14 +396,14 @@ class analyze_pso:
         vmins = {
             'g1':0,
             'ksat':0,
-            'diff_g1':-10,
+            'diff_g1':-1,
             'diff_ksat':-0.00005,
             'perc_diff':-5
         }
         vmaxs = {
-            'g1':40,
+            'g1':.5,
             'ksat':0.00005,
-            'diff_g1':10,
+            'diff_g1':1,
             'diff_ksat':0.00005,
             'perc_diff':5
         }

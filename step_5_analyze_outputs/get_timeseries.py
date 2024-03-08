@@ -89,7 +89,8 @@ class get_timeseries:
         else:
             ldas_domain_fname = os.path.join(
                 (
-                    '/shared/exps/GEOSldas_CN45_med_default/0/output/'+
+                    '/lustre/catchment/exps/' +
+                    'GEOSldas_CN45_med_default_pft_g1_2006_2007_camels/0/output/'+
                     'SMAP_EASEv2_M36/rc_out'
                 ),'0.ldas_domain.txt'
             )
@@ -107,8 +108,7 @@ class get_timeseries:
                 idx = np.where(true_tiles == pi)[0][0]
                 catch_pix_idx[p] = idx
             except:
-                print('ERROR! User-specified pixel {} does not exist in model output.'.format(pi))
-                sys.exit()
+                raise Exception('User-specified pixel {} does not exist in model output.'.format(pi))
         #self.pixels = pixels
         self.catch_pix_idx = catch_pix_idx
         # if datset hasn't been saved then generate it
@@ -412,16 +412,16 @@ class get_timeseries:
             for ke in out_dict.keys():
                 out_dict[ke] = out_dict[ke].iloc[start_idx:end_idx+1]
         return out_dict
-    def get_fluxcom_timeseries(self,fluxcom_dir):
+    def get_fluxcom_timeseries(self,fluxcom_dir,start_err,end_err):
         # load the fluxcom data from previous step
         fluxcom_data = pd.read_csv(fluxcom_dir)
         # set the start and end dates
-        start_format = self.start.strftime('%Y-%m-%d')
-        end_format = self.end.strftime('%Y-%m-%d')
+        start_format = start_err.strftime('%Y-%m-%d')
+        end_format = end_err.strftime('%Y-%m-%d')
         # find which rows this is in fluxcom
         fluxcom_time = np.array(fluxcom_data['time'])
-        start_idx = np.where(fluxcom_data == start_format)[0][0]
-        end_idx = np.where(fluxcom_data == end_format)[0][0]
+        start_idx = np.where(fluxcom_time == start_format)[0][0]
+        end_idx = np.where(fluxcom_time == end_format)[0][0]
         # trim to these start and end dates
         fluxcom_trimmed = fluxcom_data.iloc[start_idx:end_idx+1]
         # set the fluxcom columns to be ints instead of strings, aligning with
@@ -439,7 +439,7 @@ class get_timeseries:
         strm_data = strm_data.set_index('time')
         # trim using start and end dates
         # format the start and end dates
-        start_fmt = self.start.strftime('%Y%m')
-        end_fmt = self.end.strftime('%Y%m')
+        start_fmt = self.start.strftime('%Y%m%d')
+        end_fmt = self.end.strftime('%Y%m%d')
         strm_data = strm_data.loc[start_fmt:end_fmt]
         return strm_data

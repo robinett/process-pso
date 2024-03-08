@@ -27,7 +27,7 @@ def main():
     )
     # what is approximately the maximum number of tiles that we want to run in
     # the optimization?
-    max_num_tiles = 1000
+    max_num_tiles = 20
     # file for catchment tile information
     tile_fname = os.path.join(data_dir,'tile_coord.csv')
     # file name for the final output dictionary
@@ -44,6 +44,11 @@ def main():
     chosen_tiles_gdf_fname = os.path.join(out_dir,'chosen_tiles.geojson')
     # fname of where to save the selected camels ids
     chosen_camels_fname = os.path.join(out_dir,'chosen_camels.csv')
+    # okay, so chosen tile gdf above isn't actually chosen tiles. lets make one
+    # that really is just chosen tiles
+    really_chosen_tiles_gdf_fname = os.path.join(
+        out_dir,'really_chosen_tiles.geojson'
+    )
     # do we want to reprocess the data? If true, does so and saves. If false,
     # just loads saved processed data
     reprocess = True
@@ -53,9 +58,17 @@ def main():
     ch = choose()
     if reprocess:
         # get this catchment tile intersection infor from these
-        intersection_info,all_intersecting,tile_shapes,camels_sel,camel_shapes = (
-            ch.get_catch_tiles(tile_fname,camels_boundaries_fname,max_num_tiles)
+        outs = (
+            ch.get_catch_tiles(
+                tile_fname,camels_boundaries_fname,max_num_tiles
+            )
         )
+        intersection_info = outs[0]
+        all_intersecting = outs[1]
+        tile_shapes = outs[2]
+        camels_sel = outs[3]
+        camel_shapes = outs[4]
+        really_chosen_tiles_shapes = outs[5]
         print('number of total tiles needed to run:')
         print(len(all_intersecting))
         ch.save_dictionary(intersection_info,dictionary_name)
@@ -65,6 +78,7 @@ def main():
         ch.create_include_file(all_intersecting,include_fname)
         ch.save_gdf(tile_shapes,chosen_tiles_gdf_fname)
         ch.save_gdf(camel_shapes,chosen_camels_gdf_fname)
+        ch.save_gdf(really_chosen_tiles_shapes,really_chosen_tiles_gdf_fname)
     if plot_maps:
         # load the stuff here
         print('loading intersection info')

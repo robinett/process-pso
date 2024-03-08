@@ -2,9 +2,9 @@ from harmonize import harmonize
 
 def main():
     # what is bb g1 we want to convert from?
-    bb_g1 = 4
+    bb_g1 = 8
     # what is the temperature we are assuming (in K)?
-    T = 298.15
+    T = 298
     # what is the rel humidity we are assuming (fractional)?
     rel_hum = 0.8
 
