@@ -341,9 +341,9 @@ class analyze_watershed:
         pso_final_df = pd.DataFrame(columns=cols)
         waterwatch_df = pd.DataFrame(columns=cols)
         # lets start by getting the avg lai for each watershed
-        lai_ds = nc.Dataset(lai_fname)
-        lai_vals = np.array(lai_ds['lai'])
-        avg_lai = np.zeros(len(cols))
+        #lai_ds = nc.Dataset(lai_fname)
+        #lai_vals = np.array(lai_ds['lai'])
+        #avg_lai = np.zeros(len(cols))
         for w,wat in enumerate(watersheds):
             # get the tiles in this watershed
             this_tiles = intersection_info[watersheds_str[w]][0]
@@ -354,12 +354,12 @@ class analyze_watershed:
                 this_ti_idx = int(np.where(all_tiles == ti)[0][0])
                 tiles_idx = np.append(tiles_idx,this_ti_idx)
             # get the average lai for this watershed
-            this_lai = lai_vals[tiles_idx]
-            this_avg_lai = np.average(this_lai,weights=this_perc)
-            avg_lai[w] = this_avg_lai
-        avg_lai_all = np.mean(avg_lai)
-        avg_lai[-1] = avg_lai_all
-        default_df.loc['lai'] = avg_lai
+            #this_lai = lai_vals[tiles_idx]
+            #this_avg_lai = np.average(this_lai,weights=this_perc)
+            #avg_lai[w] = this_avg_lai
+        #avg_lai_all = np.mean(avg_lai)
+        #avg_lai[-1] = avg_lai_all
+        #default_df.loc['lai'] = avg_lai
         # let's get average streamflow
         # for the default senario
         default_strm_avg = np.array(default_strm.mean())
@@ -461,7 +461,7 @@ class analyze_watershed:
                 this_default_strm = default_strm_yr[wat]
                 this_pso_strm = pso_final_strm_yr[wat]
                 this_waterwatch_strm = waterwatch_strm_int[wat]
-                this_exp = exp_names[0]
+                this_exp = exp_names[2]
                 savename = os.path.join(
                     plots_dir,'streamflow_yearly_timeseries_{}_{}.png'.format(
                         this_exp,wat
@@ -470,20 +470,20 @@ class analyze_watershed:
                 plt.figure()
                 plt.plot(
                     dates_dtm,this_default_strm,label='Default streamflow',
-                    c='r',linewidth=.8
+                    c='r',marker='o'#linewidth=.8
                 )
                 plt.plot(
                     dates_dtm,this_waterwatch_strm,label='CAMELS Streamflow',
-                    c='k',linewidth=.8
+                    c='k',marker='o'#linewidth=.8
                 )
                 #plt.plot(
                 #    dates_dtm,this_default_runoff,label='PSO iteration 1',
                 #    c='y',linewidth=.8
                 #)
-                #plt.plot(
-                #    dates_dtm,this_default_baseflow,label='PSO final iteration',
-                #    c='g',linewidth=.8
-                #)
+                plt.plot(
+                    dates_dtm,this_pso_strm,label='PSO final iteration',
+                    c='g',marker='o'#linewidth=.8
+                )
                 plt.legend()
                 plt.xlabel('Date')
                 plt.ylabel('mm/day')
@@ -1140,8 +1140,6 @@ class analyze_watershed:
         pso_final_df.loc['le_rmse'] = pso_rmse_le
         pso_final_df.loc['le_r2'] = pso_r2_le
         pso_final_df.loc['le_corr'] = pso_corr_le
-        print(pso_ubrmse_le)
-        print(len(pso_ubrmse_le))
         pso_final_df.loc['le_ubrmse'] = pso_ubrmse_le
         # caluclate rmse for pso_init catchment-cn
         pso_init_diff = np.array(pso_init_strm_yr - waterwatch_strm_int)
@@ -1218,7 +1216,6 @@ class analyze_watershed:
             )
             /len(camels_strm_2006_avg)
         )
-        print(camels_diff_strm_2006_2007)
         default_diff_le_2006_2007 = (
             default_le_2006_avg - default_le_2007_avg
         )
@@ -1541,11 +1538,9 @@ class analyze_watershed:
         perc_diff_strm_final_avg = (
             (final_strm_avg - default_strm_avg)/default_strm_avg
         )
-        print(len(default_strm_rmse))
         if make_plots:
             # now let's get the shapes that we need for plotting
             huc6s = gpd.read_file(geojson_fname)
-            print(huc6s)
             if not plot_trim:
                 # now let's get everythin in arrays for proper plotting
                 names = [

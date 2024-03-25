@@ -807,6 +807,12 @@ class compare_experiments:
             exp_2_pix_pso_df.loc['perc_change_le_ubrmse']
         )
         avg_exp_perc_change_le_ubrmse = exp_perc_change_le_ubrmse['all']
+        # change in le ubrmse between experiments
+        exp_change_le_ubrmse = (
+            exp_1_pix_pso_df.loc['change_le_ubrmse'] -
+            exp_2_pix_pso_df.loc['change_le_ubrmse']
+        )
+        avg_exp_change_le_ubrmse = exp_change_le_ubrmse['all']
         # difference of average le
         exp_diff_ave_le = (
             exp_1_pix_pso_df.loc['ave_le'] -
@@ -817,19 +823,19 @@ class compare_experiments:
         vals = [
             exp_perc_change_le_rmse,exp_change_le_r2,exp_change_le_corr,
             exp_perc_change_le_ubrmse,exp_diff_ave_le,
-            exp_change_le_rmse
+            exp_change_le_rmse,exp_change_le_ubrmse
         ]
         # put the averages that correspond to these values
         avgs = [
             avg_exp_perc_change_le_rmse,avg_exp_change_le_r2,avg_exp_change_le_corr,
             avg_exp_perc_change_le_ubrmse,avg_exp_diff_ave_le,
-            avg_exp_change_le_rmse
+            avg_exp_change_le_rmse,avg_exp_change_le_ubrmse
         ]
         # put the name the corresponds to each of these values
         names = [
             'exp_perc_change_le_rmse','exp_change_le_r2','exp_change_le_corr',
             'exp_perc_change_le_ubrmse','exp_diff_ave_le',
-            'exp_change_le_rmse'
+            'exp_change_le_rmse','exp_change_le_ubrmse'
         ]
         # vals, avgs, and names need to all be the same length. if this isn't
         # true stop here and inform the user
@@ -849,7 +855,8 @@ class compare_experiments:
             'exp_change_le_corr':'bwr',
             'exp_perc_change_le_ubrmse':'bwr',
             'exp_diff_ave_le':'bwr',
-            'exp_change_le_rmse':'bwr'
+            'exp_change_le_rmse':'bwr',
+            'exp_change_le_ubrmse':'bwr'
         }
         vmins = {
             'exp_perc_change_le_rmse':-.5,
@@ -857,7 +864,8 @@ class compare_experiments:
             'exp_change_le_corr':-.2,
             'exp_perc_change_le_ubrmse':-.3,
             'exp_diff_ave_le':-5,
-            'exp_change_le_rmse':-5
+            'exp_change_le_rmse':-5,
+            'exp_change_le_ubrmse':-10
         }
         vmaxs = {
             'exp_perc_change_le_rmse':.5,
@@ -865,7 +873,8 @@ class compare_experiments:
             'exp_change_le_corr':.2,
             'exp_perc_change_le_ubrmse':.3,
             'exp_diff_ave_le':5,
-            'exp_change_le_rmse':5
+            'exp_change_le_rmse':5,
+            'exp_change_le_ubrmse':10
         }
         for p in range(len(vals)):
             # let's first plot the rmse of default experiment versus fluxcom
@@ -913,16 +922,22 @@ class compare_experiments:
         # now lets do this for our streamflow friends
         # percent change in strm rmse
         # change in strm perc rmse between experiments
-        #print(exp_1_wat_pso_df)
-        #print(exp_2_wat_pso_df)
-        #exp_perc_change_strm_rmse = (
-        #    exp_1_wat_pso_df.loc['perc_change_strm_rmse'] -
-        #    exp_2_wat_pso_df.loc['perc_change_strm_rmse']
-        #)
-        #avg_exp_perc_change_strm_rmse = exp_perc_change_strm_rmse['all']
-        #exp_perc_change_strm_rmse = np.array(exp_perc_change_strm_rmse)
-        #exp_perc_change_strm_rmse = exp_perc_change_strm_rmse[:-1]
-        ## change in strm r2 between experiments
+        exp_perc_change_strm_rmse = (
+            exp_1_wat_pso_df.loc['perc_change_strm_rmse'] -
+            exp_2_wat_pso_df.loc['perc_change_strm_rmse']
+        )
+        avg_exp_perc_change_strm_rmse = exp_perc_change_strm_rmse['all']
+        exp_perc_change_strm_rmse = np.array(exp_perc_change_strm_rmse)
+        exp_perc_change_strm_rmse = exp_perc_change_strm_rmse[:-1]
+        # change in strm rmse between experiments
+        exp_change_strm_rmse = (
+            exp_1_wat_pso_df.loc['change_strm_rmse'] -
+            exp_2_wat_pso_df.loc['change_strm_rmse']
+        )
+        avg_exp_change_strm_rmse = exp_change_strm_rmse['all']
+        exp_change_strm_rmse = np.array(exp_change_strm_rmse)
+        exp_change_strm_rmse = exp_change_strm_rmse[:-1]
+        # change in strm r2 between experiments
         #exp_change_strm_r2 = (
         #    exp_1_wat_pso_df.loc['change_strm_r2'] -
         #    exp_2_wat_pso_df.loc['change_strm_r2']
@@ -954,108 +969,122 @@ class compare_experiments:
         #avg_exp_change_strm_nse = exp_change_strm_nse['all']
         #exp_change_strm_nse = np.array(exp_change_strm_nse)
         #exp_change_strm_nse = exp_change_strm_nse[:-1]
-        ## change in strm between experiments
-        #exp_diff_strm = (
-        #    exp_1_wat_pso_df.loc['diff_strm'] -
-        #    exp_2_wat_pso_df.loc['diff_strm']
-        #)
-        #avg_exp_diff_strm = exp_diff_strm['all']
-        #exp_diff_strm = np.array(exp_diff_strm)
-        #exp_diff_strm = exp_diff_strm[:-1]
-        ## and plot this data
-        ## now let's get the shapes that we need for plotting
-        #huc6s = gpd.read_file(geojson_fname)
-        ## now let's get everythin in arrays for proper plotting
-        #names = [
-        #    'exp_perc_change_strm_rmse','exp_change_strm_r2','exp_change_strm_corr',
-        #    'exp_perc_change_strm_ubrmse','exp_change_strm_nse','exp_diff_strm'
-        #]
-        #vals = [
-        #    exp_perc_change_strm_rmse,exp_change_strm_r2,exp_change_strm_corr,
-        #    exp_perc_change_strm_ubrmse,exp_change_strm_nse,exp_diff_strm
-        #]
-        #avgs = [
-        #    avg_exp_perc_change_strm_rmse,avg_exp_change_strm_r2,avg_exp_change_strm_corr,
-        #    avg_exp_perc_change_strm_ubrmse,avg_exp_change_strm_nse,avg_exp_diff_strm
-        #]
-        #types = names
-        #cmaps = {
-        #    'exp_perc_change_strm_rmse':'bwr',
-        #    'exp_change_strm_r2':'bwr',
-        #    'exp_change_strm_corr':'bwr',
-        #    'exp_perc_change_strm_ubrmse':'bwr',
-        #    'exp_change_strm_nse':'bwr',
-        #    'exp_diff_strm':'bwr'
-        #}
-        #vmins = {
-        #    'exp_perc_change_strm_rmse':-.2,
-        #    'exp_change_strm_r2':-1,
-        #    'exp_change_strm_corr':-1,
-        #    'exp_perc_change_strm_ubrmse':-.1,
-        #    'exp_change_strm_nse':-1,
-        #    'exp_diff_strm':-20
-        #}
-        #vmaxs = {
-        #    'exp_perc_change_strm_rmse':.2,
-        #    'exp_change_strm_r2':1,
-        #    'exp_change_strm_corr':1,
-        #    'exp_perc_change_strm_ubrmse':.1,
-        #    'exp_change_strm_nse':1,
-        #    'exp_diff_strm':20
-        #}
-        #print('reading states')
-        #states = gpd.read_file(states_shp)
-        #states = states.to_crs('EPSG:4326')
-        ## get rid of non-conus states since not considering
-        #non_conus = ['HI','VI','MP','GU','AK','AS','PR']
-        #states_conus = states
-        #print('looping non conus')
-        #for n in non_conus:
-        #    states_conus = states_conus[states_conus.STUSPS != n]
-        #for n,name in enumerate(names):
-        #    print(name)
-        #    fig,ax = plt.subplots()
-        #    divider = make_axes_locatable(ax)
-        #    cax = divider.append_axes('right', size='5%', pad=0.05)
-        #    state_ids = list(states_conus['GEOID'])
-        #    for s,sid in enumerate(state_ids):
-        #        this_geom = states_conus['geometry'].iloc[s]
-        #        try:
-        #            xs,ys = this_geom.exterior.xy
-        #            ax.fill(xs,ys,fc='none',ec='k',linewidth=.2)
-        #        except:
-        #            for geom in this_geom.geoms:
-        #                xs,ys = geom.exterior.xy
-        #                ax.fill(xs,ys,fc='none',ec='k',linewidth=.2)
-        #    # get a list of all the hucs
-        #    all_hucs = list(huc6s['huc6'])
-        #    # get our normalize function for getting colors
-        #    norm = mpl.colors.Normalize(
-        #        vmin=vmins[types[n]],vmax=vmaxs[types[n]]
-        #    )
-        #    this_cmap = mpl.cm.get_cmap(cmaps[types[n]])
-        #    for h,huc in enumerate(all_hucs):
-        #        this_geom = huc6s['geometry'].iloc[h]
-        #        xs,ys = this_geom.exterior.xy
-        #        this_val = vals[n][h]
-        #        this_val_norm = norm(this_val)
-        #        this_color = this_cmap(this_val_norm)
-        #        ax.fill(xs,ys,fc=this_color,ec='k',linewidth=0.5)
-        #    ax.text(
-        #        -127+2,20+4,'Average {name}: {val:.2f}'.format(
-        #            name=names[n],val=avgs[n]
-        #        ),
-        #        bbox=dict(facecolor='white')
-        #    )
-        #    fig.colorbar(
-        #        mpl.cm.ScalarMappable(norm=norm, cmap=this_cmap),
-        #        cax=cax, orientation='vertical'
-        #    )
-        #    this_savename = os.path.join(
-        #        plots_dir,
-        #        '{name}_{exp_1}_vs_{exp_2}_huc6.png'.format(
-        #            name=names[n],exp_1=exp_1_names[2],exp_2=exp_2_names[2]
-        #        )
-        #    )
-        #    plt.savefig(this_savename,dpi=350,bbox_inches='tight')
-        #    plt.close()
+        # change in strm between experiments
+        exp_diff_strm = (
+            exp_1_wat_pso_df.loc['diff_strm'] -
+            exp_2_wat_pso_df.loc['diff_strm']
+        )
+        avg_exp_diff_strm = exp_diff_strm['all']
+        exp_diff_strm = np.array(exp_diff_strm)
+        exp_diff_strm = exp_diff_strm[:-1]
+        # and plot this data
+        # now let's get the shapes that we need for plotting
+        huc6s = gpd.read_file(geojson_fname)
+        # now let's get everythin in arrays for proper plotting
+        names = [
+            'exp_perc_change_strm_rmse','exp_change_strm_rmse',
+            'exp_diff_strm'
+        ]
+        vals = [
+            exp_perc_change_strm_rmse,exp_change_strm_rmse,exp_diff_strm
+        ]
+        avgs = [
+            avg_exp_perc_change_strm_rmse,avg_exp_change_strm_rmse
+            ,avg_exp_diff_strm
+        ]
+        types = names
+        cmaps = {
+            'exp_perc_change_strm_rmse':'bwr',
+            'exp_change_strm_rmse':'bwr',
+            'exp_change_strm_r2':'bwr',
+            'exp_change_strm_corr':'bwr',
+            'exp_perc_change_strm_ubrmse':'bwr',
+            'exp_change_strm_nse':'bwr',
+            'exp_diff_strm':'bwr'
+        }
+        vmins = {
+            'exp_perc_change_strm_rmse':-.2,
+            'exp_change_strm_rmse':-.5,
+            'exp_change_strm_r2':-1,
+            'exp_change_strm_corr':-1,
+            'exp_perc_change_strm_ubrmse':-.1,
+            'exp_change_strm_nse':-1,
+            'exp_diff_strm':-.5
+        }
+        vmaxs = {
+            'exp_perc_change_strm_rmse':.2,
+            'exp_change_strm_rmse':.5,
+            'exp_change_strm_r2':1,
+            'exp_change_strm_corr':1,
+            'exp_perc_change_strm_ubrmse':.1,
+            'exp_change_strm_nse':1,
+            'exp_diff_strm':.5
+        }
+        print('reading states')
+        states = gpd.read_file(states_shp)
+        states = states.to_crs('EPSG:4326')
+        # get rid of non-conus states since not considering
+        non_conus = ['HI','VI','MP','GU','AK','AS','PR']
+        states_conus = states
+        print('looping non conus')
+        for n in non_conus:
+            states_conus = states_conus[states_conus.STUSPS != n]
+        all_hucs = np.array(exp_1_wat_pso_df.columns)
+        all_hucs = all_hucs[:-1]
+        for n,name in enumerate(names):
+            print(name)
+            fig,ax = plt.subplots()
+            divider = make_axes_locatable(ax)
+            cax = divider.append_axes('right', size='5%', pad=0.05)
+            state_ids = list(states_conus['GEOID'])
+            for s,sid in enumerate(state_ids):
+                this_geom = states_conus['geometry'].iloc[s]
+                try:
+                    xs,ys = this_geom.exterior.xy
+                    ax.fill(xs,ys,fc='none',ec='k',linewidth=.2)
+                except:
+                    for geom in this_geom.geoms:
+                        xs,ys = geom.exterior.xy
+                        ax.fill(xs,ys,fc='none',ec='k',linewidth=.2)
+            ## get a list of all the hucs
+            #all_hucs = list(huc6s['huc6'])
+            # get our normalize function for getting colors
+            norm = mpl.colors.Normalize(
+                vmin=vmins[types[n]],vmax=vmaxs[types[n]]
+            )
+            this_cmap = mpl.cm.get_cmap(cmaps[types[n]])
+            for h,huc in enumerate(all_hucs):
+                    idx = np.where(
+                        huc6s['hru_id'] == huc
+                    )[0][0]
+                    this_geom = huc6s['geometry'].iloc[idx]
+                    this_val = vals[n][h]
+                    this_val_norm = norm(this_val)
+                    this_color = this_cmap(this_val_norm)
+                    if this_geom.geom_type == 'Polygon':
+                        xs,ys = this_geom.exterior.xy
+                        ax.fill(xs,ys,fc=this_color,ec='k',linewidth=0.2)
+                    elif this_geom.geom_type == 'MultiPolygon':
+                        for this_this_geom in this_geom.geoms:
+                            xs,ys = this_this_geom.exterior.xy
+                            ax.fill(xs,ys,fc=this_color,ec='k',linewidth=0.2)
+                    else:
+                        raise IOError('Shape is not a polygon')
+            ax.text(
+                -127+2,20+4,'Average {name}: {val:.2f}'.format(
+                    name=names[n],val=avgs[n]
+                ),
+                bbox=dict(facecolor='white')
+            )
+            fig.colorbar(
+                mpl.cm.ScalarMappable(norm=norm, cmap=this_cmap),
+                cax=cax, orientation='vertical'
+            )
+            this_savename = os.path.join(
+                plots_dir,
+                '{name}_{exp_1}_vs_{exp_2}_huc6.png'.format(
+                    name=names[n],exp_1=exp_1_names[2],exp_2=exp_2_names[2]
+                )
+            )
+            plt.savefig(this_savename,dpi=350,bbox_inches='tight')
+            plt.close()

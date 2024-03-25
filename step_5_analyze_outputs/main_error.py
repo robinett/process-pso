@@ -43,23 +43,23 @@ def main():
     )
     # the directory for comparison run
     default_experiment = (
-        '/lustre/catchment/exps/GEOSldas_CN45_med_default_pft_g1_2006_camels/0'
+        '/lustre/catchment/exps/GEOSldas_CN45_med_default_pft_g1_1992_2014_camels/0'
     )
     # the directory for the first iteration of the PSO run
     first_iteration_experiment = (
-        '/shared/pso_outputs/g1_a0_a1_et_strm_camels_test2006'
+        '/shared/pso_outputs/g1_a0_a1_et_strm_camels_spin19921994_test19952014/num_1/9'
     )
     # the directory for the final iteration of the PSO run
     final_iteration_experiment = (
-        '/shared/pso_outputs/g1_a0_a1_et_strm_camels_test2006'
+        '/shared/pso_outputs/g1_a0_a1_et_strm_camels_spin19921994_test19952014/num_8/7'
     )
     # set the start date and end date for our period of interest
     # start date and ned date are inclusive
-    start = datetime.date(2006,1,1)
-    end = datetime.date(2006,12,31)
+    start = datetime.date(1992,1,1)
+    end = datetime.date(2014,12,31)
     # start and end dates for when to compute eror statistics
-    start_error = datetime.date(2006,1,1)
-    end_error = datetime.date(2006,12,31)
+    start_error = datetime.date(1995,1,1)
+    end_error = datetime.date(2014,12,31)
     # let's set the experiments that we need to load
     # the name, dir, load_bools, and save_bools below are all lists where each
     # element of that list corresponds to:
@@ -68,13 +68,13 @@ def main():
         # 2: the final iteration of the PSO run
     # what are the experiment names to use
     exp_names = [
-        'med-default-pft-g1-2006',
-        'g1-a0-a1-et-strm-test2006-first',
-        'g1-a0-a1-et-strm-test2006-final'
+        'med-default-pft-g1-1992-2014',
+        'g1-a0-a1-et-strm-spin19921994-test19952014-first',
+        'g1-a0-a1-et-strm-spin19921994-test19952014-num8'
     ]
     # location of the all_info.pkl file containing pso information
     all_info_fname = (
-        '/shared/pso_outputs/g1_a0_a1_et_strm_camels_test2006/all_info.pkl'
+        '/shared/pso_outputs/g1_a0_a1_et_strm_camels_spin19921994_test19952014/all_info.pkl'
     )
     # what are the directories where these experiments exist
     exp_dirs = [
@@ -88,9 +88,9 @@ def main():
     read_met_forcing = [False,False,False]
     # if raw model outputs have already been processed, 
     # should processed data be loaded instead?
-    load_bools =  [False,False,False]
+    load_bools =  [True,True,True]
     # if generating a new timeseries, should it be saved?
-    save_bools = [True,True,True]
+    save_bools = [False,False,False]
     # default experiment must be filled in as a real directory the other
     # two must be fake and the experiments must be pre-saved as .pkl files
     default_experiment_compare = default_experiment
@@ -103,9 +103,9 @@ def main():
         final_iteration_experiment_compare
     ]
     exp_names_compare = [
-        'g1-a0-a1-et-camels-spin2006-test2007-final',
-        'g1-ai-et-camels-v3-spin2006-test2007-final',
-        'g1-ai-et-camels-v3-spin2006-test2007-final'
+        'med-default-pft-g1-1992-2014',
+        'g1-ai-et-strm-spin19921994-test19952014-first',
+        'g1-ai-et-strm-spin19921994-test19952014-num8'
     ]
     save_bools_compare = [False,False,False]
     load_bools_compare = [True,True,True]
@@ -113,7 +113,7 @@ def main():
     read_met_forcing_compare = [False,False,False]
     # what is the all info for this comparison experiment?
     comparison_all_info_fname = (
-        '/shared/pso_outputs/g1_ai_et_camels_spin2006_test2007_v3/all_info.pkl'
+        '/shared/pso_outputs/g1_ai_et_strm_camels_spin19921994_test19952014/all_info.pkl'
     )
     # is this a pso experiment? obviously, yes it is
     experiment_type = 'pso'
@@ -121,12 +121,12 @@ def main():
     fluxcom_dir = (
         '/shared/pso/step_3_process_gleam/outputs/'
         'le_truth_gleam_38a_watts_per_m2_' +
-        '2007-01-01_2007-12-31_camels_tiles.csv'
+        '1995-01-01_2014-12-31_camels_tiles.csv'
     )
     # where is the streamflow data located?
     strm_dir = (
         '/shared/pso/step_3.1.1_process_camels/outputs/' +
-        'camels_truth_yearly_2007-01-01_2007-12-31_mm_day.csv'
+        'camels_truth_yearly_1995-01-01_2014-12-31_mm_day.csv'
     )
     # where is the dictionary containing information about which tiles
     # intersected which hucs?
@@ -140,7 +140,7 @@ def main():
     # where is precip covariate map located?
     precip_map_fname = os.path.join(
         env_covariate_base_dir,
-        'averaged_precip.nc4'
+        'gldas_avg_precip_normalized.nc4'
     )
     # where is lai covariate map located?
     lai_map_fname = os.path.join(
@@ -156,6 +156,11 @@ def main():
     k0_map_fname = os.path.join(
         env_covariate_base_dir,
         'averaged_ksat.nc4'
+    )
+    # where is the canopy height map located?
+    canopy_map_fname =os.path.join(
+        env_covariate_base_dir,
+        'canopy_height_normalized.nc4'
     )
     # where are the error comparison maps located?
     error_comparisons_dir = (
@@ -223,12 +228,12 @@ def main():
     plot_pix_analysis = False
     plot_pix_timeseries = False
     run_watershed_analysis = True
-    plot_watershed_analysis = True
-    plot_watershed_timeseries = True
+    plot_watershed_analysis = False
+    plot_watershed_timeseries = False
     # must run both pix analysis and watershed analysis for pso analysis to
     # work correctly
-    run_pso_analysis = False
-    compare_multiple_experiments = True
+    run_pso_analysis = True
+    compare_multiple_experiments = False
     analyze_during_drought = False
     plot_spei = False
     # should the all the experiments be plotted?
@@ -335,14 +340,13 @@ def main():
             # waterwatch_df = returned_rmse[3]
         # plot maps for watershed-scale outputs
         #print('plotting maps for watershed scale outputs')
-        if plot_watershed_analysis:
-            #a_water.plot_water_metrics(
-            #    wat_scale_outs,plots_dir
-            #)
-            a_water.plot_maps(
-                returned_rmse_dfs,plots_dir,geojson_fname,exp_names,
-                states_shp_fname,plot_watershed_analysis,skinny_plot
-            )
+        #a_water.plot_water_metrics(
+        #    wat_scale_outs,plots_dir
+        #)
+        a_water.plot_maps(
+            returned_rmse_dfs,plots_dir,geojson_fname,exp_names,
+            states_shp_fname,plot_watershed_analysis,skinny_plot
+        )
     if run_pso_analysis:
         if not run_pix_analysis or not run_watershed_analysis:
             print('you must run both pixel analysis and watershed analysis')
@@ -364,6 +368,7 @@ def main():
                 pft_info,default_df_pix,plots_dir,exp_names,
                 gldas_precip_dir,gldas_temp_dir,gldas_pet_dir,
                 gldas_et_dir,canopy_height_dir,returned_rmse_dfs,
+                canopy_map_fname,
                 intersection_info
             )
         else:
@@ -371,7 +376,10 @@ def main():
                 pso_all_info,pixels,precip_map_fname,lai_map_fname,
                 sand_map_fname,k0_map_fname,
                 pft_info,default_df_pix,plots_dir,exp_names,
-                comparison_all_info
+                gldas_precip_dir,gldas_temp_dir,gldas_pet_dir,
+                gldas_et_dir,canopy_height_dir,returned_rmse_dfs,
+                canopy_map_fname,
+                intersection_info,comparison_all_info
             )
     if compare_multiple_experiments:
         print('comparing to the second experiment')
@@ -432,7 +440,7 @@ def main():
         comp.plot_diff(
             exp_names,exp_names_compare,pso_df_pix,pso_df_pix_compare,
             returned_rmse_dfs[2],returned_rmse_dfs_compare[2],
-            geojson_fname,states_shp_fname,plots_dir
+            geojson_fname,states_shp_fname,plots_dir# add wat outs,timeser,plot
         )
     if analyze_during_drought:
         d = drought()

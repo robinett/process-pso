@@ -155,7 +155,6 @@ class analyze_pix:
         change rmse after first iteration]
         Options for experiment_type are: 'pso','general'
         '''
-        print(fluxcom_timeseries)
         # get the pixels for this analysis
         pixels = list(fluxcom_timeseries.columns)
         # get rid of time from this list of pixels
@@ -725,13 +724,30 @@ class analyze_pix:
             datetime.datetime.strptime(d[:10],'%Y-%m-%d') for d in times_str
         ]
         this_exp = exp_names[2]
+        day_diff = (
+            len(default_timeseries_le[pixels[0]]) -
+            len(fluxcom_timeseries[pixels[0]])
+        )
+        if day_diff != 0:
+            fluxcom_extended = np.zeros((
+                len(default_timeseries_le[pixels[0]]),
+                len(default_timeseries_le.columns)
+            ))
+            for p,pix in enumerate(pixels):
+                fluxcom_extended[:,p] = np.append(
+                    np.zeros(day_diff) + np.nan,
+                    fluxcom_timeseries[pix]
+                )
         for p,pix in enumerate(pixels):
             print('plotting et timeseries for pixel {}'.format(pix))
             this_default = default_timeseries_le[pix]
             this_first_it = first_it_timeseries_le[pix]
             this_final_it = final_it_timeseries_le[pix]
-            this_fluxcom = fluxcom_timeseries[pix]
-            this_times = np.array(this_fluxcom.index)
+            if day_diff == 0:
+                this_fluxcom = fluxcom_timeseries[pix]
+            else:
+                this_fluxcom = fluxcom_extended[:,p]
+            this_times = np.array(fluxcom_timeseries.index)
             this_savename = os.path.join(
                 plots_dir,'le_timeseries_{}_{}.png'.format(
                     this_exp,pix
@@ -765,14 +781,16 @@ class analyze_pix:
             end_2012_str = datetime.datetime.strftime(end_2012,'%Y-%m-%d')
             start_idx = np.where(this_times == start_2010_str)[0][0]
             end_idx = np.where(this_times == end_2012_str)[0][0]
+            start_idx_catch = start_idx - day_diff
+            end_idx_catch = end_idx - day_diff
             this_default_2010_2012 = default_timeseries_le[pix].iloc[
-                start_idx:end_idx+1
+                start_idx_catch:end_idx_catch+1
             ]
             this_first_it_2010_2012 = first_it_timeseries_le[pix].iloc[
-                start_idx:end_idx+1
+                start_idx_catch:end_idx_catch+1
             ]
             this_final_it_2010_2012 = final_it_timeseries_le[pix].iloc[
-                start_idx:end_idx+1
+                start_idx_catch:end_idx_catch+1
             ]
             this_fluxcom_2010_2012 = fluxcom_timeseries[pix].iloc[
                 start_idx:end_idx+1
@@ -893,6 +911,9 @@ class analyze_pix:
         # difference in le between fluxcom and PSO
         diff_le_pso = pso_df.loc['ave_le_diff']
         avg_diff_le_pso = diff_le_pso['all']
+        # change in ubrmse
+        change_le_ubrmse = pso_df.loc['change_le_ubrmse']
+        avg_change_le_ubrmse = change_le_ubrmse['all']
         # combine all relevant information into lists to be plotted:
             # exps are the name of the experiments
             # vals are the values of the actual poitns
@@ -905,14 +926,14 @@ class analyze_pix:
                 exp_names[0],exp_names[2],exp_names[1],exp_names[2],exp_names[1],
                 exp_names[0],exp_names[0],exp_names[0],exp_names[2],exp_names[2],
                 exp_names[2],exp_names[2],exp_names[2],exp_names[2],exp_names[2],
-                exp_names[2]
+                exp_names[2],exp_names[2]
             ]
             vals = [
                 default_le_rmse,pso_le_rmse,pso_first_it_le_rmse,perc_change_le_rmse,
                 perc_change_le_rmse_first_it,diff_le_default,default_le_r2,
                 default_le_corr,pso_le_r2,pso_le_corr,change_le_r2,change_le_corr,
                 default_le_ubrmse,pso_le_ubrmse,perc_change_le_ubrmse,
-                diff_le_pso
+                diff_le_pso,change_le_ubrmse
             ]
             avgs = [
                 avg_default_le_rmse,avg_pso_le_rmse,avg_pso_first_it_le_rmse,
@@ -921,7 +942,8 @@ class analyze_pix:
                 avg_default_le_r2,avg_default_le_corr,avg_pso_le_r2,
                 avg_pso_le_corr,avg_change_le_r2,avg_change_le_corr,
                 avg_default_le_rmse,avg_pso_le_ubrmse,
-                avg_perc_change_le_ubrmse,avg_diff_le_pso
+                avg_perc_change_le_ubrmse,avg_diff_le_pso,
+                avg_change_le_ubrmse
             ]
             names = [
                 'default_le_rmse','pso_le_rmse','pso_first_it_le_rmse',
@@ -929,13 +951,13 @@ class analyze_pix:
                 'diff_le_default','default_le_r2','default_le_corr',
                 'pso_le_r2','pso_le_corr','change_le_r2','change_le_corr',
                 'default_le_ubrmse','pso_le_ubrmse',
-                'perc_change_le_ubrmse','diff_le_pso'
+                'perc_change_le_ubrmse','diff_le_pso','change_le_ubrmse'
             ]
             types = [
                 'le_rmse','le_rmse','le_rmse','le_perc_change','le_perc_change',
                 'le_diff','le_perc_change','le_perc_change','le_perc_change',
                 'le_perc_change','le_perc_change','le_perc_change',
-                'le_rmse','le_rmse','le_perc_change','le_diff'
+                'le_rmse','le_rmse','le_perc_change','le_diff','le_rmse'
             ]
             cmaps = {
                 'le_rmse':'winter',
