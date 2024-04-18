@@ -1,5 +1,6 @@
-import pickle as pkl
 import sys
+sys.path.append('/shared/pso/other_analyses/pft_prevalence')
+import pickle as pkl
 import numpy as np
 import matplotlib.pyplot as plt
 import os
@@ -8,40 +9,38 @@ import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 from scipy import stats
 import pandas as pd
+from statsmodels.formula.api import ols
+import copy
+from get_pft_distribution import pft_dist
 
 class analyze_pso:
-    def __init__(self):
-        pass
+    def __init__(self,optimization_type):
+        self.optimization_type = optimization_type
     def get_all_info(self,all_info_fname):
         with open(all_info_fname,'rb') as f:
             all_info = pkl.load(f)
         return all_info
     def get_parameter_names(self):
-        parameter_names = [
-            'a0_needleleaf_trees', # 1
-            'a0_broadleaf_evergreen_trees', # 2
-            'a0_broadleaf_deciduous_trees', # 3
-            'a0_shrub', # 4
-            'a0_arctic_c3_grass', # 5
-            'a0_c3_grass', # 6
-            'a0_c4_grass', # 7
-            'a0_crop' # 8 
-            'a1_needleleaf_trees', # 9 
-            'a1_broadleaf_evergreen_trees', # 10
-            'a1_broadleaf_deciduous_trees', # 11
-            'a1_shrub', # 12
-            'a1_arctic_c3_grass', # 13
-            'a1_c3_grass', # 14
-            'a1_c4_grass', # 15
-            'a1_crop', # 16
-            'a2_needleleaf_trees', # 17
-            'a2_broadleaf_evergreen_trees', # 18
-            'a2_broadleaf_deciduous_trees', # 19
-            'a2_shrub', # 20
-            'a2_arctic_c3_grass', # 21
-            'a2_c3_grass', # 22
-            'a2_c4_grass', # 23
-            'a2_crop', # 24
+        if self.optimization_type == 'pft':
+            parameter_names = [
+                'a0_needleleaf_trees', # 1
+                'a0_broadleaf_trees', # 2
+                'a0_shrub', # 3
+                'a0_c3_grass', # 4
+                'a0_c4_grass', # 5
+                'a0_crop' # 6
+            ]
+        elif self.optimization_type == 'ef':
+            parameter_names = [
+                'b_needleleaf_trees', # 1
+                'b_broadleaf_trees', # 2
+                'b_shrub', # 3
+                'b_c3_grass', # 4
+                'b_c4_grass', # 5
+                'b_crop', # 6
+                'a0', # 7
+                'a1', # 8
+                'a2' # 9
         ]
         return parameter_names
     def plot_parameter_convergence(self,all_info,parameter_names,plots_dir,
@@ -108,6 +107,7 @@ class analyze_pso:
                             gldas_precip_dir,gldas_temp_dir,gldas_pet_dir,
                             gldas_et_dir,canopy_height_dir,returned_rmse_dfs,
                             canopy_map_fname,intersection_info,
+                            plot_pso_scatter,
                             all_info_compare='none'):
         this_exp_name = exp_names[2]
         # get env covariates maps
@@ -131,6 +131,16 @@ class analyze_pso:
         #gldas_et_df = gldas_et_df.set_index('time')
         canopy_height_df = pd.read_csv(canopy_height_dir)
         canopy_height_df = canopy_height_df.set_index('time')
+        # testing stuff
+        #print(precip_fname)
+        #print(norm_precip_vals)
+        #print(gldas_precip_dir)
+        #print(gldas_precip_df)
+        #print(canopy_map_fname)
+        #print(norm_canopy_vals)
+        #print(canopy_height_dir)
+        #print(canopy_height_df)
+        #sys.exit()
         # let's make a scatter plot of precip values versus default model RMSE
         # to see if they co-vary
         # let's get the model error varaibles
@@ -144,20 +154,29 @@ class analyze_pso:
         model_corr = model_corr[:-1]
         model_ubrmse = np.array(default_df.loc['le_ubrmse'])
         model_ubrmse = model_ubrmse[:-1]
+        model_bias = np.array(default_df.loc['ave_le_diff'])
+        model_bias = model_bias[:-1]
         not_nan_idx = np.where(
             np.isnan(model_rmse) == False
+        )
+        nan_idx = np.where(
+            np.isnan(model_rmse) == True
         )
         # let's get the covariates. start with precip
         gldas_precip_avg = np.array(gldas_precip_df.mean())
         #gldas_temp_avg = np.array(gldas_temp_df.mean())
         gldas_pet_avg = np.array(gldas_pet_df.mean())
         #gldas_et_avg = np.array(gldas_et_df.mean())
-        #canopy_height_avg = np.array(canopy_height_df.mean())
+        canopy_height_avg = np.array(canopy_height_df.mean())
         pixels_str = gldas_precip_df.columns
         pixels = [
             int(p) for p in pixels_str
         ]
         pixels = np.array(pixels)
+        nan_pix = pixels[nan_idx]
+        not_nan_pix = pixels[not_nan_idx]
+        le_obs = np.array(default_df.loc['le_obs'])
+        le_obs = le_obs[not_nan_idx]
         # let's convert precip to mm/day
         gldas_precip_avg = gldas_precip_avg*86400
         # let's convert ET to mm/day
@@ -175,6 +194,12 @@ class analyze_pso:
         strm_corr = strm_corr[:-1]
         strm_ubrmse = np.array(default_strm.loc['strm_ubrmse'])
         strm_ubrmse = strm_ubrmse[:-1]
+        strm_bias = np.array(default_strm.loc['strm_avg_diff'])
+        strm_bias = strm_bias[:-1]
+        strm_obs = np.array(default_strm.loc['strm_obs'])
+        strm_obs = strm_obs[:-1]
+        strm_mae = np.array(default_strm.loc['strm_mae'])
+        strm_mae = strm_mae[:-1]
         not_nan_idx_strm = np.where(
             np.isnan(strm_rmse) == False
         )
@@ -225,15 +250,15 @@ class analyze_pso:
         p_pet = gldas_precip_avg/gldas_pet_avg
         #pet_et = gldas_pet_avg - gldas_et_avg
         #inv_canopy_height = 1/canopy_height_avg
-        #p_pet_strm = gldas_precip_strm/gldas_pet_strm
+        p_pet_strm = gldas_precip_strm/gldas_pet_strm
         #pet_et_strm = gldas_pet_strm - gldas_et_strm
         #inv_canopy_height_strm = 1/canopy_height_strm
         # get rid of nans everywhere
         model_rmse = model_rmse[not_nan_idx]
-        model_bias = model_bias[not_nan_idx]
         model_r2 = model_r2[not_nan_idx]
         model_corr = model_corr[not_nan_idx]
         model_ubrmse = model_ubrmse[not_nan_idx]
+        model_bias = model_bias[not_nan_idx]
         gldas_precip_avg = gldas_precip_avg[not_nan_idx]
         #gldas_temp_avg = gldas_temp_avg[not_nan_idx]
         #inv_canopy_height = inv_canopy_height[not_nan_idx]
@@ -246,160 +271,1032 @@ class analyze_pso:
         strm_nse = strm_nse[not_nan_idx_strm]
         strm_corr = strm_corr[not_nan_idx_strm]
         strm_ubrmse = strm_ubrmse[not_nan_idx_strm]
+        strm_bias = strm_bias[not_nan_idx_strm]
+        strm_obs = strm_obs[not_nan_idx_strm]
+        strm_mae = strm_mae[not_nan_idx_strm]
         gldas_precip_strm = gldas_precip_strm[not_nan_idx_strm]
         #gldas_temp_strm = gldas_temp_strm[not_nan_idx_strm]
         #inv_canopy_height_strm = inv_canopy_height_strm[not_nan_idx_strm]
         canopy_height_strm = canopy_height_strm[not_nan_idx_strm]
         p_pet_strm = p_pet_strm[not_nan_idx_strm]
         #pet_et_strm = pet_et_strm[not_nan_idx_strm]
+        # now for where we want to look at the multiple linear regression
+        can_mean = np.mean(canopy_height)
+        can_std = np.std(canopy_height)
+        can_norm = (canopy_height - can_mean)/can_std
+        #can_max = np.max(canopy_height)
+        #can_norm = canopy_height/can_max
+        gldas_precip_mean = np.mean(gldas_precip_avg)
+        gldas_precip_std = np.std(gldas_precip_avg)
+        gldas_precip_norm = (
+            (
+                gldas_precip_avg - gldas_precip_mean
+            )/gldas_precip_std
+        )
+        #gldas_precip_max = np.max(gldas_precip_avg)
+        #gldas_precip_norm = gldas_precip_avg/gldas_precip_max
+        p_pet_mean = np.mean(p_pet)
+        p_pet_std = np.std(p_pet)
+        p_pet_norm = (p_pet - p_pet_mean)/p_pet_std
+        #p_pet_max = np.max(p_pet)
+        #p_pet_norm = p_pet/p_pet_max
+        can_mean_strm = np.mean(canopy_height_strm)
+        can_std_strm = np.std(canopy_height_strm)
+        can_norm_strm = (
+            (
+                canopy_height_strm - can_mean_strm
+            )/can_std_strm
+        )
+        #can_max_strm = np.max(canopy_height_strm)
+        #can_norm_strm = canopy_height_strm/can_max_strm
+        gldas_precip_mean_strm = np.mean(gldas_precip_strm)
+        gldas_precip_std_strm = np.std(gldas_precip_strm)
+        gldas_precip_norm_strm = (
+            (
+                gldas_precip_strm - gldas_precip_mean_strm
+            )/gldas_precip_std_strm
+        )
+        #gldas_precip_max_strm = np.max(gldas_precip_strm)
+        #gldas_precip_norm_strm = gldas_precip_strm/gldas_precip_max_strm
+        p_pet_mean_strm = np.mean(p_pet_strm)
+        p_pet_std_strm = np.std(p_pet_strm)
+        p_pet_norm_strm = (
+            (
+                p_pet_strm - p_pet_mean_strm
+            )/p_pet_std_strm
+        )
+        #p_pet_max_strm = np.max(p_pet_strm)
+        #p_pet_norm_strm = p_pet_strm/p_pet_max_strm
+        data_precip_strm = pd.DataFrame(
+            {
+                'precip':gldas_precip_norm_strm,
+                'canopy_height':can_norm_strm,
+                'strm_rmse':strm_rmse
+            }
+        )
+        model_precip_strm = ols(
+            "strm_rmse ~ precip + canopy_height",data_precip_strm
+        ).fit()
+        model_precip_coefs_strm = model_precip_strm._results.params
+        precip_a0_strm = model_precip_coefs_strm[0]
+        precip_a1_strm = model_precip_coefs_strm[1]
+        precip_a2_strm = model_precip_coefs_strm[2]
+        precip_r2_strm = model_precip_strm.rsquared
+        data_ppet_strm = pd.DataFrame(
+            {
+                'p_pet':p_pet_norm_strm,
+                'canopy_height':can_norm_strm,
+                'strm_rmse':strm_rmse
+            }
+        )
+        model_ppet_strm = ols(
+            "strm_rmse ~ p_pet + canopy_height",data_ppet_strm
+        ).fit()
+        model_ppet_coefs_strm = model_ppet_strm._results.params
+        ppet_a0_strm = model_ppet_coefs_strm[0]
+        ppet_a1_strm = model_ppet_coefs_strm[1]
+        ppet_a2_strm = model_ppet_coefs_strm[2]
+        ppet_r2_strm = model_ppet_strm.rsquared
+        data_precip = pd.DataFrame(
+            {
+                'precip':gldas_precip_norm,
+                'canopy_height':can_norm,
+                'le_ubrmse':model_ubrmse
+            }
+        )
+        model_precip = ols("le_ubrmse ~ precip + canopy_height",data_precip).fit()
+        model_precip_coefs = model_precip._results.params
+        precip_a0 = model_precip_coefs[0]
+        precip_a1 = model_precip_coefs[1]
+        precip_a2 = model_precip_coefs[2]
+        precip_r2 = model_precip.rsquared
+        data_ppet = pd.DataFrame(
+            {
+                'p_pet':p_pet_norm,
+                'canopy_height':can_norm,
+                'le_ubrmse':model_ubrmse
+            }
+        )
+        model_ppet = ols("le_ubrmse ~ p_pet + canopy_height",data_ppet).fit()
+        model_ppet_coefs = model_ppet._results.params
+        ppet_a0 = model_ppet_coefs[0]
+        ppet_a1 = model_ppet_coefs[1]
+        ppet_a2 = model_ppet_coefs[2]
+        ppet_r2 = model_ppet.rsquared
+        data_precip_bias = pd.DataFrame(
+            {
+                'precip':gldas_precip_norm,
+                'canopy_height':can_norm,
+                'le_bias':model_bias
+            }
+        )
+        model_precip_bias = ols(
+            "le_bias ~ precip + canopy_height",data_precip_bias
+        ).fit()
+        model_precip_bias_coefs = model_precip_bias._results.params
+        precip_bias_a0 = model_precip_bias_coefs[0]
+        precip_bias_a1 = model_precip_bias_coefs[1]
+        precip_bias_a2 = model_precip_bias_coefs[2]
+        precip_bias_r2 = model_precip_bias.rsquared
+        data_precip_bias_strm = pd.DataFrame(
+            {
+                'precip':gldas_precip_norm_strm,
+                'canopy_height':can_norm_strm,
+                'strm_bias':strm_bias
+            }
+        )
+        model_precip_bias_strm = ols(
+            "strm_bias ~ precip + canopy_height",data_precip_bias_strm
+        ).fit()
+        model_precip_bias_coefs_strm = model_precip_bias_strm._results.params
+        precip_bias_a0_strm = model_precip_bias_coefs_strm[0]
+        precip_bias_a1_strm = model_precip_bias_coefs_strm[1]
+        precip_bias_a2_strm = model_precip_bias_coefs_strm[2]
+        precip_bias_r2_strm = model_precip_bias_strm.rsquared
+        # and now for all of the cases where we try to see how much value
+        # canopy height adds
+        m_ppet,b_ppet,na,nan,nana = (
+            stats.linregress(p_pet,model_bias)
+        )
+        remain_res_ppet = (
+            model_bias -
+            m_ppet*p_pet -
+            b_ppet
+        )
+        m_precip,b_precip,na,nan,nana = (
+            stats.linregress(gldas_precip_avg,model_bias)
+        )
+        remain_res_precip = (
+            model_bias -
+            m_precip*gldas_precip_avg -
+            b_precip
+        )
+        m_precip_strm,b_precip_strm,na,nan,nana = (
+            stats.linregress(gldas_precip_strm,strm_bias)
+        )
+        remain_res_precip_strm = (
+            strm_bias -
+            m_precip_strm*gldas_precip_strm -
+            b_precip_strm
+        )
+        m_ppet_strm,b_ppet_strm,na,nan,nana = (
+            stats.linregress(p_pet_strm,strm_bias)
+        )
+        remain_res_ppet_strm = (
+            strm_bias -
+            m_ppet_strm*p_pet_strm -
+            b_ppet_strm
+        )
+        # let's make sure default streamflow error is normally distributed
+        strm_rmse_normalized = strm_rmse - np.mean(
+            strm_rmse
+        )
+        strm_rmse_normalized = strm_rmse_normalized/np.std(
+            strm_rmse_normalized
+        )
+        strm_rmse_norm = strm_rmse/strm_obs
+        strm_rmse_norm_normalized = strm_rmse_norm - np.mean(
+            strm_rmse_norm
+        )
+        strm_rmse_norm_normalized = strm_rmse_norm_normalized/np.std(
+            strm_rmse_norm_normalized
+        )
+        binwidth = 0.15
+        plt.figure()
+        plt.hist(
+            strm_rmse_normalized,
+            bins=np.arange(
+                min(strm_rmse_normalized),
+                max(strm_rmse_normalized) + binwidth,
+                binwidth
+            )
+        )
+        save_name = os.path.join(
+            plots_dir,
+            'strm_rmse_hist.png'
+        )
+        plt.savefig(save_name)
+        plt.close()
+        plt.figure()
+        plt.hist(
+            strm_rmse_norm_normalized,
+            bins=np.arange(
+                min(strm_rmse_norm_normalized),
+                max(strm_rmse_norm_normalized) + binwidth,
+                binwidth
+            )
+        )
+        save_name = os.path.join(
+            plots_dir,
+            'strm_rmse_norm_hist.png'
+        )
+        plt.savefig(save_name)
+        plt.close()
+        too_small_idx = np.where(strm_obs < 0.05)
+        big_enough_idx = np.where(strm_obs >= 0.05)
+        print('number of catchments removed:')
+        print(np.shape(too_small_idx))
+        strm_rmse_big = strm_rmse[big_enough_idx]
+        strm_obs_big = strm_obs[big_enough_idx]
+        strm_rmse_big_normalized = strm_rmse_big - np.mean(
+            strm_rmse_big
+        )
+        strm_rmse_big_normalized = strm_rmse_big_normalized/np.std(
+            strm_rmse_big_normalized
+        )
+        strm_rmse_big_norm = strm_rmse_big/strm_obs_big
+        strm_rmse_big_norm_normalized = strm_rmse_big_norm - np.mean(
+            strm_rmse_norm
+        )
+        strm_rmse_big_norm_normalized = strm_rmse_big_norm_normalized/np.std(
+            strm_rmse_big_norm_normalized
+        )
+        plt.figure()
+        plt.hist(
+            strm_rmse_big_normalized,
+            bins=np.arange(
+                min(strm_rmse_big_normalized),
+                max(strm_rmse_big_normalized) + binwidth,
+                binwidth
+            )
+        )
+        save_name = os.path.join(
+            plots_dir,
+            'strm_rmse_big_hist.png'
+        )
+        plt.savefig(save_name)
+        plt.close()
+        plt.figure()
+        plt.hist(
+            strm_rmse_big_norm_normalized,
+            bins=np.arange(
+                min(strm_rmse_big_norm_normalized),
+                max(strm_rmse_big_norm_normalized) + binwidth,
+                binwidth
+            )
+        )
+        save_name = os.path.join(
+            plots_dir,
+            'strm_rmse_big_norm_hist.png'
+        )
+        plt.savefig(save_name)
+        plt.close()
+        strm_mae_normalized = strm_mae - np.mean(
+            strm_mae
+        )
+        strm_mae_normalized = strm_mae_normalized/np.std(
+            strm_mae_normalized
+        )
+        strm_mae_norm = strm_mae/strm_obs
+        strm_mae_norm_normalized = strm_mae_norm - np.mean(
+            strm_mae_norm
+        )
+        strm_mae_norm_normalized = strm_mae_norm_normalized/np.std(
+            strm_mae_norm_normalized
+        )
+        plt.figure()
+        plt.hist(
+            strm_mae_normalized,
+            bins=np.arange(
+                min(strm_mae_normalized),
+                max(strm_mae_normalized) + binwidth,
+                binwidth
+            )
+        )
+        save_name = os.path.join(
+            plots_dir,
+            'strm_mae_hist.png'
+        )
+        plt.savefig(save_name)
+        plt.close()
+        plt.figure()
+        plt.hist(
+            strm_mae_norm_normalized,
+            bins=np.arange(
+                min(strm_mae_norm_normalized),
+                max(strm_mae_norm_normalized) + binwidth,
+                binwidth
+            )
+        )
+        save_name = os.path.join(
+            plots_dir,
+            'strm_mae_norm_hist.png'
+        )
+        plt.savefig(save_name)
+        plt.close()
+        too_small_idx = np.where(strm_obs < 0.05)
+        big_enough_idx = np.where(strm_obs >= 0.05)
+        print('number of catchments removed:')
+        print(np.shape(too_small_idx))
+        strm_mae_big = strm_mae[big_enough_idx]
+        strm_obs_big = strm_obs[big_enough_idx]
+        strm_mae_big_normalized = strm_mae_big - np.mean(
+            strm_mae_big
+        )
+        strm_mae_big_normalized = strm_mae_big_normalized/np.std(
+            strm_mae_big_normalized
+        )
+        strm_mae_big_norm = strm_mae_big/strm_obs_big
+        strm_mae_big_norm_normalized = strm_mae_big_norm - np.mean(
+            strm_mae_norm
+        )
+        strm_mae_big_norm_normalized = strm_mae_big_norm_normalized/np.std(
+            strm_mae_big_norm_normalized
+        )
+        plt.figure()
+        plt.hist(
+            strm_mae_big_normalized,
+            bins=np.arange(
+                min(strm_mae_big_normalized),
+                max(strm_mae_big_normalized) + binwidth,
+                binwidth
+            )
+        )
+        save_name = os.path.join(
+            plots_dir,
+            'strm_mae_big_hist.png'
+        )
+        plt.savefig(save_name)
+        plt.close()
+        plt.figure()
+        plt.hist(
+            strm_mae_big_norm_normalized,
+            bins=np.arange(
+                min(strm_mae_big_norm_normalized),
+                max(strm_mae_big_norm_normalized) + binwidth,
+                binwidth
+            )
+        )
+        save_name = os.path.join(
+            plots_dir,
+            'strm_mae_big_norm_hist.png'
+        )
+        plt.savefig(save_name)
+        plt.close()
+        sys.exit()
+        # let's just look at within-PFT variability
+        p_d = pft_dist()
+        pft_distribution = p_d.get_pso_pfts(pft_info,intersection_info)
+        # at the pixel scale, we have enough >80% pixels to make this plot for
+        # Needleleaf, Broadleaf, Shrub, Cool c3 grass, crop
+        # at the watershed scale we have Needleleaf, Broadleaf, warm c4 grass
+        need_pix = pft_distribution['pix_80']['pixels'].loc['Needleleaf']
+        num_del = 0
+        for p,pix in enumerate(need_pix):
+            if pix in nan_pix:
+                need_pix = np.delete(need_pix,p - num_del)
+                num_del += 1
+        need_le_ubrmse = np.zeros(len(need_pix))
+        need_le_obs = np.zeros(len(need_pix))
+        need_precip = np.zeros(len(need_pix))
+        need_canopy = np.zeros(len(need_pix))
+        for p,pix in enumerate(need_pix):
+            this_idx = np.where(not_nan_pix == pix)
+            need_le_ubrmse[p] = model_ubrmse[this_idx]
+            need_le_obs[p] = le_obs[this_idx]
+            need_precip[p] = gldas_precip_avg[this_idx]
+            need_canopy[p] = canopy_height_avg[this_idx]
+        need_le_ubrmse_norm = need_le_ubrmse/need_le_obs
+        broad_pix = pft_distribution['pix_80']['pixels'].loc['Broadleaf']
+        num_del = 0
+        for p,pix in enumerate(broad_pix):
+            if pix in nan_pix:
+                broad_pix = np.delete(broad_pix,p - num_del)
+                num_del += 1
+        broad_le_ubrmse = np.zeros(len(broad_pix))
+        broad_le_obs = np.zeros(len(broad_pix))
+        broad_precip = np.zeros(len(broad_pix))
+        broad_canopy = np.zeros(len(broad_pix))
+        for p,pix in enumerate(broad_pix):
+            this_idx = np.where(not_nan_pix == pix)
+            broad_le_ubrmse[p] = model_ubrmse[this_idx]
+            broad_le_obs[p] = le_obs[this_idx]
+            broad_precip[p] = gldas_precip_avg[this_idx]
+            broad_canopy[p] = canopy_height_avg[this_idx]
+        broad_le_ubrmse_norm = broad_le_ubrmse/broad_le_obs
+        shrub_pix = pft_distribution['pix_80']['pixels'].loc['Shrub']
+        num_del = 0
+        for p,pix in enumerate(shrub_pix):
+            if pix in nan_pix:
+                shrub_pix = np.delete(shrub_pix,p)
+                num_del += 1
+        shrub_le_ubrmse = np.zeros(len(shrub_pix))
+        shrub_le_obs = np.zeros(len(shrub_pix))
+        shrub_precip = np.zeros(len(shrub_pix))
+        shrub_canopy = np.zeros(len(shrub_pix))
+        for p,pix in enumerate(shrub_pix):
+            this_idx = np.where(not_nan_pix == pix)
+            shrub_le_ubrmse[p] = model_ubrmse[this_idx]
+            shrub_le_obs[p] = le_obs[this_idx]
+            shrub_precip[p] = gldas_precip_avg[this_idx]
+            shrub_canopy[p] = canopy_height_avg[this_idx]
+        shrub_le_ubrmse_norm = shrub_le_ubrmse/shrub_le_obs
+        c3grass_pix = pft_distribution['pix_80']['pixels'].loc['Cool c3 grass']
+        num_del = 0
+        for p,pix in enumerate(c3grass_pix):
+            if pix in nan_pix:
+                c3grass = np.delete(c3grass,p)
+                num_del += 1
+        c3grass_le_ubrmse = np.zeros(len(c3grass_pix))
+        c3grass_le_obs = np.zeros(len(c3grass_pix))
+        c3grass_precip = np.zeros(len(c3grass_pix))
+        c3grass_canopy = np.zeros(len(c3grass_pix))
+        for p,pix in enumerate(c3grass_pix):
+            this_idx = np.where(not_nan_pix == pix)
+            c3grass_le_ubrmse[p] = model_ubrmse[this_idx]
+            c3grass_le_obs[p] = le_obs[this_idx]
+            c3grass_precip[p] = gldas_precip_avg[this_idx]
+            c3grass_canopy[p] = canopy_height_avg[this_idx]
+        c3grass_le_ubrmse_norm = c3grass_le_ubrmse/c3grass_le_obs
+        crop_pix = pft_distribution['pix_80']['pixels'].loc['Crop']
+        num_del = 0
+        for p,pix in enumerate(crop_pix):
+            if pix in nan_pix:
+                crop = np.delete(crop,p)
+                num_del += 1
+        crop_le_ubrmse = np.zeros(len(crop_pix))
+        crop_le_obs = np.zeros(len(crop_pix))
+        crop_precip = np.zeros(len(crop_pix))
+        crop_canopy = np.zeros(len(crop_pix))
+        for p,pix in enumerate(crop_pix):
+            this_idx = np.where(not_nan_pix == pix)
+            crop_le_ubrmse[p] = model_ubrmse[this_idx]
+            crop_le_obs[p] = le_obs[this_idx]
+            crop_precip[p] = gldas_precip_avg[this_idx]
+            crop_canopy[p] = canopy_height_avg[this_idx]
+        crop_le_ubrmse_norm = crop_le_ubrmse/crop_le_obs
+        # let's do this for stream
+        need_wat = pft_distribution['wat_80']['watersheds'].loc[
+            'Needleleaf'
+        ]
+        need_strm_rmse = np.zeros(len(need_wat))
+        need_strm_obs = np.zeros(len(need_wat))
+        need_strm_precip = np.zeros(len(need_wat))
+        need_strm_canopy = np.zeros(len(need_wat))
+        for w,wat in enumerate(need_wat):
+            this_idx = np.where(watersheds == wat)
+            need_strm_rmse[w] = strm_rmse[this_idx]
+            need_strm_obs[w] = strm_obs[this_idx]
+            need_strm_precip[w] = gldas_precip_strm[this_idx]
+            need_strm_canopy[w] = canopy_height_strm[this_idx]
+        need_strm_rmse_norm = need_strm_rmse/need_strm_obs
+        broad_wat = pft_distribution['wat_80']['watersheds'].loc[
+            'Broadleaf'
+        ]
+        broad_strm_rmse = np.zeros(len(broad_wat))
+        broad_strm_obs = np.zeros(len(broad_wat))
+        broad_strm_precip = np.zeros(len(broad_wat))
+        broad_strm_canopy = np.zeros(len(broad_wat))
+        for w,wat in enumerate(broad_wat):
+            this_idx = np.where(watersheds == wat)
+            broad_strm_rmse[w] = strm_rmse[this_idx]
+            broad_strm_obs[w] = strm_obs[this_idx]
+            broad_strm_precip[w] = gldas_precip_strm[this_idx]
+            broad_strm_canopy[w] = canopy_height_strm[this_idx]
+        broad_strm_rmse_norm = broad_strm_rmse/broad_strm_obs
+
+        # let's make the plots where we just look within PFTs
+        x_names = [
+            'need_mean_annual_precip',
+            'need_canopy_height',
+            'broad_mean_annual_precip',
+            'broad_canopy_height',
+            'shrub_mean_annual_precip',
+            'shrub_canopy_height',
+            'c3grass_mean_annual_precip',
+            'c3grass_canopy_height',
+            'crop_mean_annual_precip',
+            'crop_canopy_height',
+            'need_strm_mean_annual_precip',
+            'need_strm_canopy_height',
+            'broad_strm_mean_annual_precip',
+            'broad_strm_canopy_height'
+        ]
+        x_vals = [
+            need_precip,
+            need_canopy,
+            broad_precip,
+            broad_canopy,
+            shrub_precip,
+            shrub_canopy,
+            c3grass_precip,
+            c3grass_canopy,
+            crop_precip,
+            crop_canopy,
+            need_strm_precip,
+            need_strm_canopy,
+            broad_strm_precip,
+            broad_strm_canopy
+        ]
+        x_units = [
+            'mm/day',
+            'm',
+            'mm/day',
+            'm',
+            'mm/day',
+            'm',
+            'mm/day',
+            'm',
+            'mm/day',
+            'm',
+            'mm/day',
+            'm',
+            'mm/day',
+            'm'
+        ]
+        y_names = [
+            'need_le_ubrmse_norm',
+            'need_le_ubrmse_norm',
+            'broad_le_ubrmse_norm',
+            'broad_le_ubrmse_norm',
+            'shrub_le_ubrmse_norm',
+            'shrub_le_ubrmse_norm',
+            'c3grass_le_ubrmse_norm',
+            'c3grass_le_ubrmse_norm',
+            'crop_le_ubrmse_norm',
+            'crop_le_ubrmse_norm',
+            'need_strm_rmse_norm',
+            'need_strm_rmse_norm',
+            'broad_strm_rmse_norm',
+            'broad_strm_rmse_norm'
+        ]
+        y_vals = [
+            need_le_ubrmse_norm,
+            need_le_ubrmse_norm,
+            broad_le_ubrmse_norm,
+            broad_le_ubrmse_norm,
+            shrub_le_ubrmse_norm,
+            shrub_le_ubrmse_norm,
+            c3grass_le_ubrmse_norm,
+            c3grass_le_ubrmse_norm,
+            crop_le_ubrmse_norm,
+            crop_le_ubrmse_norm,
+            need_strm_rmse_norm,
+            need_strm_rmse_norm,
+            broad_strm_rmse_norm,
+            broad_strm_rmse_norm
+        ]
+        y_units = [
+            '-',
+            '-',
+            '-',
+            '-',
+            '-',
+            '-',
+            '-',
+            '-',
+            '-',
+            '-',
+            '-',
+            '-',
+            '-',
+            '-',
+            '-'
+        ]
+        for x,x_nam in enumerate(x_names):
+            slope,intercept,r_value,na,nan = (
+                stats.linregress(x_vals[x],y_vals[x])
+            )
+            save_name = os.path.join(
+                plots_dir,
+                'scatter_{x}_vs_{y}.png'.format(
+                    x=x_nam,y=y_names[x]
+                )
+            )
+            plt.figure()
+            plt.scatter(x_vals[x],y_vals[x],s=1)
+            plt.plot(
+                x_vals[x],
+                intercept+slope*x_vals[x],
+                label='best fit line'
+            )
+            plt.annotate(
+                'r = {:.2f}'.format(r_value),
+                xy=(0.05,0.95),xycoords='axes fraction'
+            )
+            plt.xlabel(
+                '{thing} ({unit})'.format(
+                    thing=x_nam,unit=x_units[x]
+                )
+            )
+            plt.ylabel(
+                '{thing} ({unit})'.format(
+                    thing=y_names[x],unit=y_units[x]
+                )
+            )
+            plt.legend(loc=4)
+            #this_y_bounds = y_axes[y_nam]
+            #plt.ylim(this_y_bounds[0],this_y_bounds[1])
+            plt.savefig(save_name)
+            plt.close()
         # make all of the plots for le at teh pixel scale
         # decide what plots to make. code will make all possible combinations
         # of provided x and y combinations
-        x_names = [
-            'mean_annual_precip',
-            'precip_over_potential_et',
-            'potential_et_minus_actual_et','canopy_height'
-        ]
-        x_vals = [
-            gldas_precip_avg,gldas_temp_avg,
-            inv_canopy_height,p_pet,
-            pet_et,canopy_height
-        ]
-        x_units = [
-            'mm/day','K',
-            '1/m','-',
-            'mm/day','m'
-        ]
-        y_names = [
-            'catchcn_le_rmse_gleam','catchcn_le_bias_gleam','catchcn_le_r2_gleam',
-            'catchcn_le_corr_gleam','catchcn_model_le_ubrmse_gleam'
-        ]
-        y_vals = [
-            model_rmse,model_bias,model_r2,
-            model_corr,model_ubrmse
-        ]
-        y_units = [
-            'W/m2','W/m2','-',
-            '-','W/m2'
-        ]
-        y_axes = {
-            y_names[0]:[0,65],
-            y_names[1]:[-50,50],
-            y_names[2]:[-2,1],
-            y_names[3]:[.2,1],
-            y_names[4]:[0,60],
-        }
-        for x,x_nam in enumerate(x_names):
-            for y,y_nam in enumerate(y_names):
-                slope,intercept,r_value,na,nan = (
-                    stats.linregress(x_vals[x],y_vals[y])
-                )
+        if plot_pso_scatter:
+            x_names = [
+                'mean_annual_precip',
+                'precip_over_potential_et',
+                'canopy_height'
+            ]
+            x_vals = [
+                gldas_precip_avg,
+                p_pet,
+                canopy_height
+            ]
+            x_units = [
+                'mm/day',
+                '-',
+                'm'
+            ]
+            y_names = [
+                'catchcn_model_le_bias_gleam',
+                'rem_resid_precip',
+                'rem_resid_ppet'
+            ]
+            y_vals = [
+                model_bias,remain_res_precip,remain_res_ppet
+            ]
+            y_units = [
+                'W/m2','W/m2','W/m2'
+            ]
+            y_axes = {
+                y_names[0]:[0,60],
+                y_names[1]:[-40,40],
+                y_names[2]:[-40,40]
+            }
+            for x,x_nam in enumerate(x_names):
+                for y,y_nam in enumerate(y_names):
+                    slope,intercept,r_value,na,nan = (
+                        stats.linregress(x_vals[x],y_vals[y])
+                    )
+                    save_name = os.path.join(
+                        plots_dir,
+                        'scatter_{x}_vs_{y}.png'.format(
+                            x=x_nam,y=y_nam
+                        )
+                    )
+                    plt.figure()
+                    plt.scatter(x_vals[x],y_vals[y],s=1)
+                    plt.plot(
+                        x_vals[x],
+                        intercept+slope*x_vals[x],
+                        label='best fit line'
+                    )
+                    plt.annotate(
+                        'r = {:.2f}'.format(r_value),
+                        xy=(0.05,0.95),xycoords='axes fraction'
+                    )
+                    plt.xlabel(
+                        '{thing} ({unit})'.format(
+                            thing=x_nam,unit=x_units[x]
+                        )
+                    )
+                    plt.ylabel(
+                        '{thing} ({unit})'.format(
+                            thing=y_nam,unit=y_units[y]
+                        )
+                    )
+                    plt.legend(loc=4)
+                    this_y_bounds = y_axes[y_nam]
+                    plt.ylim(this_y_bounds[0],this_y_bounds[1])
+                    plt.savefig(save_name)
+                    plt.close()
+            # make all plots for streamflow at the watershed scale
+            x_names = [
+                'mean_annual_precip',
+                'precip_over_potential_et',
+                'canopy_height'
+            ]
+            x_vals = [
+                gldas_precip_strm,
+                p_pet_strm,
+                canopy_height_strm
+            ]
+            x_units = [
+                'mm/day',
+                '-',
+                'm'
+            ]
+            y_names = [
+                'catchcn_strm_bias_camels',
+                'rem_resid_precip_strm',
+                'rem_resid_ppet_strm'
+            ]
+            y_vals = [
+                strm_bias,
+                remain_res_precip_strm,
+                remain_res_ppet_strm
+            ]
+            y_units = [
+                'mm/day','mm/day','mm/day'
+            ]
+            y_axes = {
+                y_names[0]:[0,3],
+                y_names[1]:[-2,2],
+                y_names[2]:[-2,2]
+            }
+            for x,x_nam in enumerate(x_names):
+                for y,y_nam in enumerate(y_names):
+                    slope,intercept,r_value,na,nan = (
+                        stats.linregress(x_vals[x],y_vals[y])
+                    )
+                    save_name = os.path.join(
+                        plots_dir,
+                        'scatter_{x}_vs_{y}.png'.format(
+                            x=x_nam,y=y_nam
+                        )
+                    )
+                    plt.figure()
+                    plt.scatter(x_vals[x],y_vals[y],s=1)
+                    plt.plot(
+                        x_vals[x],
+                        intercept+slope*x_vals[x],
+                        label='best fit line'
+                    )
+                    plt.annotate(
+                        'r = {:.2f}'.format(r_value),
+                        xy=(0.05,0.95),xycoords='axes fraction'
+                    )
+                    plt.xlabel(
+                        '{thing} ({unit})'.format(
+                            thing=x_nam,unit=x_units[x]
+                        )
+                    )
+                    plt.ylabel(
+                        '{thing} ({unit})'.format(
+                            thing=y_nam,unit=y_units[y]
+                        )
+                    )
+                    plt.legend(loc=4)
+                    this_y_bounds = y_axes[y_nam]
+                    plt.ylim(this_y_bounds[0],this_y_bounds[1])
+                    plt.savefig(save_name)
+                    plt.close()
+            intercepts = [
+                precip_a0,
+                ppet_a0,
+                precip_a0_strm,
+                ppet_a0_strm,
+                precip_bias_a0,
+                precip_bias_a0_strm
+            ]
+            a1s = [
+                precip_a1,
+                ppet_a1,
+                precip_a1_strm,
+                ppet_a1_strm,
+                precip_bias_a1,
+                precip_bias_a1_strm
+            ]
+            a2s = [
+                precip_a2,
+                ppet_a2,
+                precip_a2_strm,
+                ppet_a2_strm,
+                precip_bias_a2,
+                precip_bias_a2_strm
+            ]
+            a1_vals = [
+                gldas_precip_norm,
+                p_pet_norm,
+                gldas_precip_norm_strm,
+                p_pet_norm_strm,
+                gldas_precip_norm,
+                gldas_precip_norm_strm
+            ]
+            a2_vals = [
+                can_norm,
+                can_norm,
+                can_norm_strm,
+                can_norm_strm,
+                can_norm,
+                can_norm_strm
+            ]
+            a1_names = [
+                'precip',
+                'p_pet',
+                'precip_strm',
+                'p_pet_strm',
+                'precip_bias',
+                'precip_bias_strm'
+            ]
+            a2_names = [
+                'canopy_height',
+                'canopy_height',
+                'canopy_height_strm',
+                'canopy_height_strm',
+                'canopy_height_bias',
+                'canopy_height_bias_strm'
+            ]
+            r2_vals = [
+                precip_r2,
+                ppet_r2,
+                precip_r2_strm,
+                ppet_r2_strm,
+                precip_bias_r2,
+                precip_bias_r2_strm
+            ]
+            ys = [
+                model_ubrmse,
+                model_ubrmse,
+                strm_rmse,
+                strm_rmse,
+                model_bias,
+                strm_bias
+            ]
+            x_labs = [
+                'predicted LE ubRMSE (W/m2)',
+                'predicted LE ubRMSE (W/m2)',
+                'predicted streamflow RMSE (mm/day)',
+                'predicted streamflow RMSE (mm/day)',
+                'predicted LE bias (W/m2)',
+                'predicted streamflow bias (mm/day)'
+            ]
+            y_labs = [
+                'actual LE ubRMSE (W/m2)',
+                'actual LE ubRMSE (W/m2)',
+                'actual streamflow RMSE (mm/day)',
+                'actual streamflow RMSE (mm/day)',
+                'actual LE bias (W/m2)',
+                'actual streamflow bias (mm/day)'
+            ]
+            types = [
+                'et',
+                'et',
+                'strm',
+                'strm',
+                'et',
+                'strm'
+            ]
+            for i,inter in enumerate(intercepts):
                 save_name = os.path.join(
                     plots_dir,
-                    'scatter_{x}_vs_{y}.png'.format(
-                        x=x_nam,y=y_nam
+                    'scatter_a1_{}_a2_{}.png'.format(
+                        a1_names[i],
+                        a2_names[i]
                     )
                 )
+                this_x = (
+                    inter +
+                    a1s[i]*a1_vals[i] +
+                    a2s[i]*a2_vals[i]
+                )
+                this_y = ys[i]
+                x_min = np.min(this_x)
+                x_max = np.max(this_x)
+                y_min = np.min(this_y)
+                y_max = np.max(this_y)
+                if types[i] == 'et':
+                    y_min_min = y_min - 10
+                    y_max_max = y_max + 10
+                elif types[i] == 'strm':
+                    y_min_min = y_min - 1
+                    y_max_max = y_max + 1
+                x_lab = x_labs[i]
+                y_lab = y_labs[i]
                 plt.figure()
-                plt.scatter(x_vals[x],y_vals[y],s=1)
+                plt.scatter(this_x,this_y,s=1)
                 plt.plot(
-                    x_vals[x],
-                    intercept+slope*x_vals[x],
-                    label='best fit line'
+                    [y_min_min,y_max_max],
+                    [y_min_min,y_max_max]
                 )
                 plt.annotate(
-                    'r = {:.2f}'.format(r_value),
+                    'R2 = {:.2f}'.format(r2_vals[i]),
                     xy=(0.05,0.95),xycoords='axes fraction'
-                )
-                plt.xlabel(
-                    '{thing} ({unit})'.format(
-                        thing=x_nam,unit=x_units[x]
-                    )
-                )
-                plt.ylabel(
-                    '{thing} ({unit})'.format(
-                        thing=y_nam,unit=y_units[y]
-                    )
-                )
-                plt.legend(loc=4)
-                this_y_bounds = y_axes[y_nam]
-                plt.ylim(this_y_bounds[0],this_y_bounds[1])
-                plt.savefig(save_name)
-                plt.close()
-        # make all plots for streamflow at the watershed scale
-        x_names = [
-            'mean_annual_precip','mean_annual_temp',
-            'one_over_canopy_height','precip_over_potential_et',
-            'potential_et_minus_actual_et','canopy_height'
-        ]
-        x_vals = [
-            gldas_precip_strm,gldas_temp_strm,
-            inv_canopy_height_strm,p_pet_strm,
-            pet_et_strm,canopy_height_strm
-        ]
-        x_units = [
-            'mm/day','K',
-            '1/m','-',
-            'mm/day','m'
-        ]
-        y_names = [
-            'catchcn_strm_rmse_camels','catchcn_strm_bias_camels','catchcn_strm_nse_camels',
-            'catchcn_strm_corr_camels','catchcn_strm_ubrmse_camels'
-        ]
-        y_vals = [
-            strm_rmse,strm_avg_diff,strm_nse,
-            strm_corr,strm_ubrmse
-        ]
-        y_units = [
-            'mm/day','mm/day','-',
-            '-','mm/day'
-        ]
-        y_axes = {
-            y_names[0]:[0,3],
-            y_names[1]:[-3,3],
-            y_names[2]:[-2,1],
-            y_names[3]:[.2,1],
-            y_names[4]:[0,2]
-        }
-        for x,x_nam in enumerate(x_names):
-            for y,y_nam in enumerate(y_names):
-                slope,intercept,r_value,na,nan = (
-                    stats.linregress(x_vals[x],y_vals[y])
-                )
-                save_name = os.path.join(
-                    plots_dir,
-                    'scatter_{x}_vs_{y}.png'.format(
-                        x=x_nam,y=y_nam
-                    )
-                )
-                plt.figure()
-                plt.scatter(x_vals[x],y_vals[y],s=1)
-                plt.plot(
-                    x_vals[x],
-                    intercept+slope*x_vals[x],
-                    label='best fit line'
                 )
                 plt.annotate(
-                    'r = {:.2f}'.format(r_value),
-                    xy=(0.05,0.95),xycoords='axes fraction'
+                    '{} = {:.2f}'.format(a1_names[i],a1s[i]),
+                    xy=(0.05,0.9),xycoords='axes fraction'
                 )
-                plt.xlabel(
-                    '{thing} ({unit})'.format(
-                        thing=x_nam,unit=x_units[x]
-                    )
+                plt.annotate(
+                    '{} = {:.2f}'.format(a2_names[i],a2s[i]),
+                    xy=(0.05,0.85),xycoords='axes fraction'
                 )
-                plt.ylabel(
-                    '{thing} ({unit})'.format(
-                        thing=y_nam,unit=y_units[y]
-                    )
-                )
-                plt.legend(loc=4)
-                this_y_bounds = y_axes[y_nam]
-                plt.ylim(this_y_bounds[0],this_y_bounds[1])
+                plt.xlim(y_min_min,y_max_max)
+                plt.ylim(y_min_min,y_max_max)
+                plt.xlabel(x_labs[i])
+                plt.ylabel(y_labs[i])
                 plt.savefig(save_name)
-                plt.close()
-        print('made it here')
-        sys.exit()
+        # let's run my fun experiment for estimating a0, a1, and a2
+        # possibilities
+        print(default_df)
+        le_obs = np.array(default_df.loc['le_obs'])
+        le_obs = le_obs[not_nan_idx]
+        g1_copied = copy.deepcopy(le_obs)
+        max_le = np.max(g1_copied)
+        min_le = np.min(g1_copied)
+        g1_init = (g1_copied - min_le)/(max_le - min_le)
+        g1_init = g1_init*3.5
+        g1_init = g1_init + 0.5
+        too_small_idx = np.where(g1_init < 0.5)
+        g1_init[too_small_idx] = 0.5
+        num_loops = 1000
+        a0s = np.zeros(num_loops)
+        a1s = np.zeros(num_loops)
+        a2s = np.zeros(num_loops)
+        r2s = np.zeros(num_loops)
+        min_g1 = np.zeros(num_loops)
+        max_g1 = np.zeros(num_loops)
+        mean_g1 = np.zeros(num_loops)
+        std_g1 = np.zeros(num_loops)
+        mu = 0
+        sigma = 1
+        num_g1s = len(le_obs)
+        for l in range(num_loops):
+            if l % 10 == 0:
+                print('iteration {}'.format(l))
+            noise = np.random.normal(mu,sigma,num_g1s)
+            this_g1 = g1_init + noise
+            #this_g1 = np.random.rand(len(g1_init))
+            #this_g1 = this_g1*4.5
+            #this_g1 = this_g1 + 0.5
+            too_small_idx = np.where(this_g1 < 0.5)
+            this_g1[too_small_idx] = 0.5
+            min_g1[l] = np.min(this_g1)
+            max_g1[l] = np.max(this_g1)
+            mean_g1[l] = np.mean(this_g1)
+            std_g1[l] = np.std(this_g1)
+            this_data = pd.DataFrame(
+                {
+                    'precip':gldas_precip_norm,
+                    'canopy_height':can_norm,
+                    'g1':this_g1
+                }
+            )
+            model_g1 = ols("g1 ~ precip + canopy_height",this_data).fit()
+            this_coefs = model_g1._results.params
+            a0s[l] = this_coefs[0]
+            a1s[l] = this_coefs[1]
+            a2s[l] = this_coefs[2]
+            r2s[l] = model_g1.rsquared
+        min_a0 = np.min(a0s)
+        max_a0 = np.max(a0s)
+        mean_a0 = np.mean(a0s)
+        std_a0 = np.std(a0s)
+        ovr_min_g1 = np.mean(min_g1)
+        ovr_max_g1 = np.mean(max_g1)
+        ovr_mean_g1 = np.mean(mean_g1)
+        ovr_std_g1 = np.mean(std_g1)
+        min_a1 = np.min(a1s)
+        max_a1 = np.max(a1s)
+        mean_a1 = np.mean(a1s)
+        std_a1 = np.std(a1s)
+        min_a2 = np.min(a2s)
+        max_a2 = np.max(a2s)
+        mean_a2 = np.mean(a2s)
+        std_a2 = np.std(a2s)
+        min_r2 = np.min(r2s)
+        max_r2 = np.max(r2s)
+        mean_r2 = np.mean(r2s)
+        std_r2 = np.std(r2s)
+        print('|  var  |  min  |  max  |  mean |  std  |')
+        print('|-------|-------|-------|-------|-------|')
+        print(
+            '| {} | {} | {} | {} | {} |'.format(
+                ' g1  ',
+                str(ovr_min_g1)[:5].ljust(5),
+                str(ovr_max_g1)[:5],
+                str(ovr_mean_g1)[:5],
+                str(ovr_std_g1)[:5]
+            )
+        )
+        print(
+            '| {} | {} | {} | {} | {} |'.format(
+                ' a0  ',
+                str(min_a0)[:5],
+                str(max_a0)[:5],
+                str(mean_a0)[:5],
+                str(std_a0)[:5]
+            )
+        )
+        print(
+            '| {} | {} | {} | {} | {} |'.format(
+                ' a1  ',
+                str(min_a1)[:5],
+                str(max_a1)[:5],
+                str(mean_a1)[:5],
+                str(std_a1)[:5]
+            )
+        )
+        print(
+            '| {} | {} | {} | {} | {} |'.format(
+                ' a2  ',
+                str(min_a2)[:5],
+                str(max_a2)[:5],
+                str(mean_a2)[:5],
+                str(std_a2)[:5]
+            )
+        )
+        print(
+            '| {} | {} | {} | {} | {} |'.format(
+                ' r2  ',
+                str(min_r2)[:5],
+                str(max_r2)[:5],
+                str(mean_r2)[:5],
+                str(std_r2)[:5]
+            )
+        )
+        #sys.exit()
         # get the global best parameters from the PSO
         iteration_keys = list(all_info.keys())
         iterations_considered = 8
@@ -439,72 +1336,6 @@ class analyze_pso:
             '(Soybean)':best_positions[7],
             '(Corn)':best_positions[7]
         }
-        a1_g1_dict = {
-            'Needleleaf evergreen temperate tree':best_positions[8],
-            'Needleleaf evergreen boreal tree':best_positions[8],
-            'Needleleaf deciduous boreal tree':best_positions[8],
-            'Broadleaf evergreen tropical tree':best_positions[9],
-            'Broadleaf evergreen temperate tree':best_positions[9],
-            'Broadleaf deciduous tropical tree':best_positions[10],
-            'Broadleaf deciduous temperate tree':best_positions[10],
-            'Broadleaf deciduous boreal tree':best_positions[10],
-            'Broadleaf evergreen temperate shrub':best_positions[11],
-            'Broadleaf deciduous boreal shrub':best_positions[11],
-            'Broadleaf deciduous temperate shrub':best_positions[11],
-            'Broadleaf deciduous temperate shrub[moisture +deciduous]': (
-                best_positions[11]
-            ),
-            'Broadleaf deciduous temperate shrub[moisture stress only]': (
-                best_positions[11]
-            ),
-            'Arctic c3 grass':best_positions[12],
-            'Cool c3 grass':best_positions[13],
-            'Cool c3 grass [moisture + deciduous]':best_positions[13],
-            'Cool c3 grass [moisture stress only]':best_positions[13],
-            'Warm c4 grass [moisture + deciduous]':best_positions[14],
-            'Warm c4 grass [moisture stress only]':best_positions[15],
-            'Warm c4 grass':best_positions[14],
-            'Crop':best_positions[15],
-            'Crop [moisture + deciduous]':best_positions[15],
-            'Crop [moisture stress only]':best_positions[15],
-            '(Spring temperate cereal)':best_positions[15],
-            '(Irrigated corn)':best_positions[15],
-            '(Soybean)':best_positions[15],
-            '(Corn)':best_positions[15]
-        }
-        a2_g1_dict = {
-            'Needleleaf evergreen temperate tree':best_positions[16],
-            'Needleleaf evergreen boreal tree':best_positions[16],
-            'Needleleaf deciduous boreal tree':best_positions[16],
-            'Broadleaf evergreen tropical tree':best_positions[17],
-            'Broadleaf evergreen temperate tree':best_positions[17],
-            'Broadleaf deciduous tropical tree':best_positions[18],
-            'Broadleaf deciduous temperate tree':best_positions[18],
-            'Broadleaf deciduous boreal tree':best_positions[18],
-            'Broadleaf evergreen temperate shrub':best_positions[19],
-            'Broadleaf deciduous boreal shrub':best_positions[19],
-            'Broadleaf deciduous temperate shrub':best_positions[19],
-            'Broadleaf deciduous temperate shrub[moisture +deciduous]': (
-                best_positions[19]
-            ),
-            'Broadleaf deciduous temperate shrub[moisture stress only]': (
-                best_positions[19]
-            ),
-            'Arctic c3 grass':best_positions[20],
-            'Cool c3 grass':best_positions[21],
-            'Cool c3 grass [moisture + deciduous]':best_positions[21],
-            'Cool c3 grass [moisture stress only]':best_positions[21],
-            'Warm c4 grass [moisture + deciduous]':best_positions[22],
-            'Warm c4 grass [moisture stress only]':best_positions[22],
-            'Warm c4 grass':best_positions[22],
-            'Crop':best_positions[23],
-            'Crop [moisture + deciduous]':best_positions[23],
-            'Crop [moisture stress only]':best_positions[23],
-            '(Spring temperate cereal)':best_positions[23],
-            '(Irrigated corn)':best_positions[23],
-            '(Soybean)':best_positions[23],
-            '(Corn)':best_positions[23]
-        }
         default_g1_dict = {
             'Needleleaf evergreen temperate tree':2.3,
             'Needleleaf evergreen boreal tree':2.3,
@@ -534,6 +1365,73 @@ class analyze_pso:
             '(Soybean)':5.79,
             '(Corn)':5.79
         }
+        if self.optimization_type == 'ef':
+            a1_g1_dict = {
+                'Needleleaf evergreen temperate tree':best_positions[8],
+                'Needleleaf evergreen boreal tree':best_positions[8],
+                'Needleleaf deciduous boreal tree':best_positions[8],
+                'Broadleaf evergreen tropical tree':best_positions[9],
+                'Broadleaf evergreen temperate tree':best_positions[9],
+                'Broadleaf deciduous tropical tree':best_positions[10],
+                'Broadleaf deciduous temperate tree':best_positions[10],
+                'Broadleaf deciduous boreal tree':best_positions[10],
+                'Broadleaf evergreen temperate shrub':best_positions[11],
+                'Broadleaf deciduous boreal shrub':best_positions[11],
+                'Broadleaf deciduous temperate shrub':best_positions[11],
+                'Broadleaf deciduous temperate shrub[moisture +deciduous]': (
+                    best_positions[11]
+                ),
+                'Broadleaf deciduous temperate shrub[moisture stress only]': (
+                    best_positions[11]
+                ),
+                'Arctic c3 grass':best_positions[12],
+                'Cool c3 grass':best_positions[13],
+                'Cool c3 grass [moisture + deciduous]':best_positions[13],
+                'Cool c3 grass [moisture stress only]':best_positions[13],
+                'Warm c4 grass [moisture + deciduous]':best_positions[14],
+                'Warm c4 grass [moisture stress only]':best_positions[15],
+                'Warm c4 grass':best_positions[14],
+                'Crop':best_positions[15],
+                'Crop [moisture + deciduous]':best_positions[15],
+                'Crop [moisture stress only]':best_positions[15],
+                '(Spring temperate cereal)':best_positions[15],
+                '(Irrigated corn)':best_positions[15],
+                '(Soybean)':best_positions[15],
+                '(Corn)':best_positions[15]
+            }
+            a2_g1_dict = {
+                'Needleleaf evergreen temperate tree':best_positions[16],
+                'Needleleaf evergreen boreal tree':best_positions[16],
+                'Needleleaf deciduous boreal tree':best_positions[16],
+                'Broadleaf evergreen tropical tree':best_positions[17],
+                'Broadleaf evergreen temperate tree':best_positions[17],
+                'Broadleaf deciduous tropical tree':best_positions[18],
+                'Broadleaf deciduous temperate tree':best_positions[18],
+                'Broadleaf deciduous boreal tree':best_positions[18],
+                'Broadleaf evergreen temperate shrub':best_positions[19],
+                'Broadleaf deciduous boreal shrub':best_positions[19],
+                'Broadleaf deciduous temperate shrub':best_positions[19],
+                'Broadleaf deciduous temperate shrub[moisture +deciduous]': (
+                    best_positions[19]
+                ),
+                'Broadleaf deciduous temperate shrub[moisture stress only]': (
+                    best_positions[19]
+                ),
+                'Arctic c3 grass':best_positions[20],
+                'Cool c3 grass':best_positions[21],
+                'Cool c3 grass [moisture + deciduous]':best_positions[21],
+                'Cool c3 grass [moisture stress only]':best_positions[21],
+                'Warm c4 grass [moisture + deciduous]':best_positions[22],
+                'Warm c4 grass [moisture stress only]':best_positions[22],
+                'Warm c4 grass':best_positions[22],
+                'Crop':best_positions[23],
+                'Crop [moisture + deciduous]':best_positions[23],
+                'Crop [moisture stress only]':best_positions[23],
+                '(Spring temperate cereal)':best_positions[23],
+                '(Irrigated corn)':best_positions[23],
+                '(Soybean)':best_positions[23],
+                '(Corn)':best_positions[23]
+            }
         if all_info_compare != 'none':
             best_positions_compare = (
                 all_info_compare[this_it_key]['global_best_positions']
@@ -612,41 +1510,65 @@ class analyze_pso:
             default_g1[g] = effective_g1
         # then for pso g1
         #pso_g1_init = -0.163747 + 0.025*precip_vals
-        pso_g1_init = np.zeros(len(norm_precip_vals))
-        pso_g1 = np.zeros(len(pso_g1_init))
-        a0_term = np.zeros(len(pso_g1_init))
-        a1_term = np.zeros(len(pso_g1_init))
-        a2_term = np.zeros(len(pso_g1_init))
-        a1_a2_term = np.zeros(len(pso_g1_init))
-        for g,g1 in enumerate(pso_g1_init):
-            this_perc = [
-                pft_info['pft_1_perc'].loc[tiles[g]],
-                pft_info['pft_2_perc'].loc[tiles[g]],
-                pft_info['pft_3_perc'].loc[tiles[g]],
-                pft_info['pft_4_perc'].loc[tiles[g]]
-            ]
-            this_pfts = [
-                pft_info['pft_1_name'].loc[tiles[g]],
-                pft_info['pft_2_name'].loc[tiles[g]],
-                pft_info['pft_3_name'].loc[tiles[g]],
-                pft_info['pft_4_name'].loc[tiles[g]]
-            ]
-            effective_a0 = 0
-            effective_a1 = 0
-            effective_a2 = 0
-            for p,perc in enumerate(this_perc):
-                effective_a0 += (perc/100)*a0_g1_dict[this_pfts[p]]
-                effective_a1 += (perc/100)*a1_g1_dict[this_pfts[p]]
-                effective_a2 += (perc/100)*a2_g1_dict[this_pfts[p]]
-            pso_g1[g] = (
-                effective_a0 + effective_a1*norm_precip_vals[g] +
-                effective_a2*norm_canopy_vals[g]
-            )
-            a0_term[g] = effective_a0
-            a1_term[g] = effective_a1*norm_precip_vals[g]
-            a2_term[g] = effective_a2*norm_canopy_vals[g]
-            a1_a2_term[g] = a1_term[g] + a2_term[g]
-        pso_g1 = np.where(pso_g1 < 0.5, 0.5, pso_g1)
+        if self.optimization_type == 'ef':
+            pso_g1_init = np.zeros(len(norm_precip_vals))
+            pso_g1 = np.zeros(len(pso_g1_init))
+            a0_term = np.zeros(len(pso_g1_init))
+            a1_term = np.zeros(len(pso_g1_init))
+            a2_term = np.zeros(len(pso_g1_init))
+            a1_a2_term = np.zeros(len(pso_g1_init))
+            for g,g1 in enumerate(pso_g1_init):
+                this_perc = [
+                    pft_info['pft_1_perc'].loc[tiles[g]],
+                    pft_info['pft_2_perc'].loc[tiles[g]],
+                    pft_info['pft_3_perc'].loc[tiles[g]],
+                    pft_info['pft_4_perc'].loc[tiles[g]]
+                ]
+                this_pfts = [
+                    pft_info['pft_1_name'].loc[tiles[g]],
+                    pft_info['pft_2_name'].loc[tiles[g]],
+                    pft_info['pft_3_name'].loc[tiles[g]],
+                    pft_info['pft_4_name'].loc[tiles[g]]
+                ]
+                effective_a0 = 0
+                effective_a1 = 0
+                effective_a2 = 0
+                for p,perc in enumerate(this_perc):
+                    effective_a0 += (perc/100)*a0_g1_dict[this_pfts[p]]
+                    effective_a1 += (perc/100)*a1_g1_dict[this_pfts[p]]
+                    effective_a2 += (perc/100)*a2_g1_dict[this_pfts[p]]
+                pso_g1[g] = (
+                    effective_a0 + effective_a1*norm_precip_vals[g] +
+                    effective_a2*norm_canopy_vals[g]
+                )
+                a0_term[g] = effective_a0
+                a1_term[g] = effective_a1*norm_precip_vals[g]
+                a2_term[g] = effective_a2*norm_canopy_vals[g]
+                a1_a2_term[g] = a1_term[g] + a2_term[g]
+            pso_g1 = np.where(pso_g1 < 0.5, 0.5, pso_g1)
+        if self.optimization_type == 'pft':
+            pso_g1_init = np.zeros(len(norm_precip_vals))
+            pso_g1 = np.zeros(len(pso_g1_init))
+            for g,g1 in enumerate(pso_g1_init):
+                this_perc = [
+                    pft_info['pft_1_perc'].loc[tiles[g]],
+                    pft_info['pft_2_perc'].loc[tiles[g]],
+                    pft_info['pft_3_perc'].loc[tiles[g]],
+                    pft_info['pft_4_perc'].loc[tiles[g]]
+                ]
+                this_pfts = [
+                    pft_info['pft_1_name'].loc[tiles[g]],
+                    pft_info['pft_2_name'].loc[tiles[g]],
+                    pft_info['pft_3_name'].loc[tiles[g]],
+                    pft_info['pft_4_name'].loc[tiles[g]]
+                ]
+                effective_a0 = 0
+                for p,perc in enumerate(this_perc):
+                    effective_a0 += (perc/100)*a0_g1_dict[this_pfts[p]]
+                pso_g1[g] = (
+                    effective_a0
+                )
+            pso_g1 = np.where(pso_g1 < 0.5, 0.5, pso_g1)
         if all_info_compare != 'none':
             compare_g1_init = np.zeros(len(norm_precip_vals))
             compare_g1 = np.zeros(len(compare_g1_init))
@@ -669,6 +1591,10 @@ class analyze_pso:
                 compare_g1[g] = effective_aj
             compare_g1 = np.where(compare_g1 < 0.5, 0.5, compare_g1)
             compare_g1_diff = pso_g1 - compare_g1
+        
+
+
+        #sys.exit()
         # make a histogram of the default ksat versus final ksat
         #bins = np.arange(0,0.001+0.00005,0.00005)
         #plt.figure()
@@ -703,24 +1629,57 @@ class analyze_pso:
         lats = default_df.loc['lat']
         lats = lats.drop(labels=['all'])
         # what are we plotting in each of these maps?
-        names = [
-            'default_g1','pso_g1',
-            'diff_g1',
-            'perc_diff_pso_g1',
-            'a0_term_map',
-            'a1_term_map','a2_term_map',
-            'a1_a2_term_map','pso_ef_g1_vs_pso_pft_g1'
-        ]
-        vals = [
-            default_g1,pso_g1,diff_pso_g1,
-            perc_diff_pso_g1,a0_term,a1_term,
-            a2_term,a1_a2_term,compare_g1_diff
-        ]
-        plot_type = [
-            'g1','g1','diff_g1',
-            'perc_diff','g1_term','g1_term','g1_term',
-            'g1_term','diff_g1_compare'
-        ]
+        if self.optimization_type == 'ef' and all_info_compare != 'none':
+            names = [
+                'default_g1','pso_g1',
+                'diff_g1',
+                'perc_diff_pso_g1',
+                'a0_term_map',
+                'a1_term_map','a2_term_map',
+                'a1_a2_term_map','exp_diff_g1'
+            ]
+            vals = [
+                default_g1,pso_g1,diff_pso_g1,
+                perc_diff_pso_g1,a0_term,a1_term,
+                a2_term,a1_a2_term,compare_g1_diff
+            ]
+            plot_type = [
+                'g1','g1','diff_g1',
+                'perc_diff','g1_term','g1_term','g1_term',
+                'g1_term','diff_g1_compare'
+            ]
+        elif self.optimization_type == 'ef' and all_info_compare == 'none':
+            names = [
+                'default_g1','pso_g1',
+                'diff_g1',
+                'perc_diff_pso_g1',
+                'a0_term_map',
+                'a1_term_map','a2_term_map',
+                'a1_a2_term_map'
+            ]
+            vals = [
+                default_g1,pso_g1,diff_pso_g1,
+                perc_diff_pso_g1,a0_term,a1_term,
+                a2_term,a1_a2_term
+            ]
+            plot_type = [
+                'g1','g1','diff_g1',
+                'perc_diff','g1_term','g1_term','g1_term',
+                'g1_term'
+            ]
+        elif self.optimization_type == 'pft':
+            names = [
+                'default_g1','pso_g1',
+                'diff_g1',
+                'perc_diff_pso_g1'
+            ]
+            vals = [
+                default_g1,pso_g1,diff_pso_g1,
+                perc_diff_pso_g1
+            ]
+            plot_type = [
+                'g1','g1','diff_g1','perc_diff'
+            ]
         cmaps = {
             'g1':'bwr',
             'diff_g1':'bwr',
@@ -730,17 +1689,17 @@ class analyze_pso:
         }
         vmins = {
             'g1':0,
-            'diff_g1':-1,
-            'perc_diff':-5,
+            'diff_g1':-6,
+            'perc_diff':-6,
             'g1_term':-5,
-            'diff_g1_compare':-3
+            'diff_g1_compare':-5
         }
         vmaxs = {
             'g1':3,
-            'diff_g1':1,
+            'diff_g1':6,
             'perc_diff':5,
             'g1_term':5,
-            'diff_g1_compare':3
+            'diff_g1_compare':5
         }
         for p in range(len(vals)):
             # let's first plot the rmse of default experiment versus fluxcom

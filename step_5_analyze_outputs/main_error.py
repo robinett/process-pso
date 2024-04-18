@@ -47,11 +47,11 @@ def main():
     )
     # the directory for the first iteration of the PSO run
     first_iteration_experiment = (
-        '/shared/pso_outputs/g1_a0_a1_et_strm_camels_spin19921994_test19952014/num_1/9'
+        '/shared/pso_outputs/g1_a0_a1_et_strm_camels_spin19921994_test19952014_v2/num_1/1'
     )
     # the directory for the final iteration of the PSO run
     final_iteration_experiment = (
-        '/shared/pso_outputs/g1_a0_a1_et_strm_camels_spin19921994_test19952014/num_8/7'
+        '/shared/pso_outputs/g1_a0_a1_et_strm_camels_spin19921994_test19952014/num_7/4'
     )
     # set the start date and end date for our period of interest
     # start date and ned date are inclusive
@@ -69,13 +69,15 @@ def main():
     # what are the experiment names to use
     exp_names = [
         'med-default-pft-g1-1992-2014',
-        'g1-a0-a1-et-strm-spin19921994-test19952014-first',
-        'g1-a0-a1-et-strm-spin19921994-test19952014-num8'
+        'g1-a0-a1-et-strm-spin19921994-test19952014-v2-first',
+        'g1-a0-a1-et-strm-spin19921994-test19952014-v2-num8'
     ]
     # location of the all_info.pkl file containing pso information
     all_info_fname = (
-        '/shared/pso_outputs/g1_a0_a1_et_strm_camels_spin19921994_test19952014/all_info.pkl'
+        '/shared/pso_outputs/g1_a0_a1_et_strm_camels_spin19921994_test19952014_v2/all_info.pkl'
     )
+    # is this a pft-based of ef-based optimization experiment?
+    optimization_type = 'ef'
     # what are the directories where these experiments exist
     exp_dirs = [
         default_experiment,first_iteration_experiment,final_iteration_experiment
@@ -233,11 +235,12 @@ def main():
     # must run both pix analysis and watershed analysis for pso analysis to
     # work correctly
     run_pso_analysis = True
+    plot_pso_scatter = False
     compare_multiple_experiments = False
     analyze_during_drought = False
     plot_spei = False
     # should the all the experiments be plotted?
-    skinny_plot = False
+    skinny_plot = True
 
     # initiate an instance of the class
     t = get_timeseries(start,end)
@@ -353,7 +356,7 @@ def main():
             print('in order to run pso analysis! Change this. Exiting.')
             sys.exit()
         # initiate a class looking at what the pso did
-        pso = analyze_pso()
+        pso = analyze_pso(optimization_type)
         pso_parameter_names = pso.get_parameter_names()
         pso_all_info = pso.get_all_info(all_info_fname)
         if compare_multiple_experiments:
@@ -369,7 +372,7 @@ def main():
                 gldas_precip_dir,gldas_temp_dir,gldas_pet_dir,
                 gldas_et_dir,canopy_height_dir,returned_rmse_dfs,
                 canopy_map_fname,
-                intersection_info
+                intersection_info,plot_pso_scatter
             )
         else:
             pso.plot_parameter_maps(
@@ -379,7 +382,7 @@ def main():
                 gldas_precip_dir,gldas_temp_dir,gldas_pet_dir,
                 gldas_et_dir,canopy_height_dir,returned_rmse_dfs,
                 canopy_map_fname,
-                intersection_info,comparison_all_info
+                intersection_info,plot_pso_scatter,comparison_all_info
             )
     if compare_multiple_experiments:
         print('comparing to the second experiment')
@@ -440,7 +443,7 @@ def main():
         comp.plot_diff(
             exp_names,exp_names_compare,pso_df_pix,pso_df_pix_compare,
             returned_rmse_dfs[2],returned_rmse_dfs_compare[2],
-            geojson_fname,states_shp_fname,plots_dir# add wat outs,timeser,plot
+            geojson_fname,states_shp_fname,plots_dir,skinny_plot
         )
     if analyze_during_drought:
         d = drought()

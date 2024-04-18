@@ -506,6 +506,8 @@ class analyze_watershed:
         pso_diff = np.zeros(len(catch_cols))
         default_rmse = np.zeros(len(catch_cols))
         pso_rmse = np.zeros(len(catch_cols))
+        default_rmse_norm_ind = np.zeros(len(catch_cols))
+        pso_rmse_norm_ind = np.zeros(len(catch_cols))
         default_r2 = np.zeros(len(catch_cols))
         pso_r2 = np.zeros(len(catch_cols))
         default_corr = np.zeros(len(catch_cols))
@@ -514,6 +516,10 @@ class analyze_watershed:
         pso_ubrmse = np.zeros(len(catch_cols))
         default_nse = np.zeros(len(catch_cols))
         pso_nse = np.zeros(len(catch_cols))
+        default_nse_avg = np.zeros(len(catch_cols))
+        pso_nse_avg = np.zeros(len(catch_cols))
+        default_mae = np.zeros(len(catch_cols))
+        pso_mae = np.zeros(len(catch_cols))
         default_diff_le = np.zeros(len(catch_cols))
         pso_diff_le = np.zeros(len(catch_cols))
         default_rmse_le = np.zeros(len(catch_cols))
@@ -553,10 +559,16 @@ class analyze_watershed:
             default_se = element_default_diff**2
             default_mse = np.mean(default_se)
             this_default_rmse = np.sqrt(default_mse)
+            this_default_rmse_norm_ind = (
+                this_default_rmse/waterwatch_strm_avg[c]
+            )
             # calculate the pso rmse
             pso_se = element_pso_diff**2
             pso_mse = np.mean(pso_se)
             this_pso_rmse = np.sqrt(pso_mse)
+            this_pso_rmse_norm_ind = (
+                this_pso_rmse/waterwatch_strm_avg[c]
+            )
             # calculate the r2 for default
             this_rss = np.sum(
                 np.square(
@@ -679,12 +691,26 @@ class analyze_watershed:
                 )
             )
             this_pso_nse = 1 - nse_numerator/nse_denom
+            # calculate the default mae
+            this_default_mae = np.sum(
+                np.abs(
+                    this_waterwatch - this_default
+                )
+            ).mean()
+            # calculate the pso mae
+            this_pso_mae = np.sum(
+                np.abs(
+                    this_waterwatch - this_pso
+                )
+            ).mean()
             # add to running error metrics
             default_diff[c] = this_default_diff
             pso_diff[c] = this_pso_diff
             default_rmse[c] = this_default_rmse
             pso_rmse[c] = this_pso_rmse
             default_r2[c] = this_default_r2
+            default_rmse_norm_ind[c] = this_default_rmse_norm_ind
+            pso_rmse_norm_ind[c] = this_pso_rmse_norm_ind
             pso_r2[c] = this_pso_r2
             default_corr[c] = this_default_corr
             pso_corr[c] = this_pso_corr
@@ -692,6 +718,8 @@ class analyze_watershed:
             pso_ubrmse[c] = this_pso_ubrmse
             default_nse[c] = this_default_nse
             pso_nse[c] = this_pso_nse
+            default_mae[c] = this_default_mae
+            pso_mae[c] = this_pso_mae
             # calculate the default difference in average
             element_default_diff_le = this_default_le - this_fluxcom
             this_default_diff_le = np.mean(element_default_diff_le)
@@ -857,12 +885,22 @@ class analyze_watershed:
         all_default_mse = np.mean(all_default_se)
         all_default_rmse = np.sqrt(all_default_mse)
         default_rmse = np.append(default_rmse,all_default_rmse)
+        default_rmse_norm = default_rmse/waterwatch_strm_avg[-1]
+        all_default_rmse_norm_ind = np.average(default_rmse_norm_ind)
+        default_rmse_norm_ind = np.append(
+            default_rmse_norm_ind,all_default_rmse_norm_ind
+        )
         # calculate the pso rmse for all
         all_pso_diff = pso_final_strm_yr_np - waterwatch_strm_int_np
         all_pso_se = all_pso_diff**2
         all_pso_mse = np.mean(all_pso_se)
         all_pso_rmse = np.sqrt(all_pso_mse)
         pso_rmse = np.append(pso_rmse,all_pso_rmse)
+        pso_rmse_norm = pso_rmse/waterwatch_strm_avg[-1]
+        all_pso_rmse_norm_ind = np.average(pso_rmse_norm_ind)
+        pso_rmse_norm_ind = np.append(
+            pso_rmse_norm_ind,all_pso_rmse_norm_ind
+        )
         # calculate the r2 for default all
         all_rss = np.sum(
             np.square(
@@ -979,7 +1017,10 @@ class analyze_watershed:
             )
         )
         all_default_nse = 1 - nse_numerator/nse_denom
+        all_default_nse_ind = np.average(default_nse)
         default_nse = np.append(default_nse,all_default_nse)
+        default_nse_ind = copy.deepcopy(default_nse)
+        default_nse_ind[-1] = all_default_nse_ind
         # calculate the pso nse
         nse_numerator = np.sum(
             np.square(
@@ -992,7 +1033,16 @@ class analyze_watershed:
             )
         )
         all_pso_nse = 1 - nse_numerator/nse_denom
+        all_pso_nse_ind = np.average(pso_nse)
         pso_nse = np.append(pso_nse,all_pso_nse)
+        pso_nse_ind = copy.deepcopy(pso_nse)
+        pso_nse_ind[-1] = all_pso_nse_ind
+        # calculate the mae for default all
+        all_default_mae = np.mean(default_mae)
+        default_mae = np.append(default_mae,all_default_mae)
+        # calculate the mae for pso all
+        all_pso_mae = np.mean(pso_mae)
+        pso_mae = np.append(pso_mae,all_pso_mae)
         # calculate the diff for default all
         all_avg_fluxcom_le = np.average(fluxcom_le_np)
         all_avg_default_le = np.average(default_le_np)
@@ -1118,29 +1168,43 @@ class analyze_watershed:
             ).mean()
         )
         pso_ubrmse_le = np.append(pso_ubrmse_le,all_pso_ubrmse_le)
+        # calculate the default normalized rmse
+        default_rmse_normal = default_rmse/all_avg_waterwatch
+        # calculate the pso normalized rmse
+        pso_rmse_normal = pso_rmse/all_avg_waterwatch
         # lets add all these new metrics to the dataframes
         default_df.loc['strm_avg_diff'] = default_diff
         default_df.loc['strm_rmse'] = default_rmse
+        default_df.loc['strm_rmse_norm'] = default_rmse_norm
+        default_df.loc['strm_rmse_norm_ind'] = default_rmse_norm_ind
         default_df.loc['strm_r2'] = default_r2
         default_df.loc['strm_corr'] = default_corr
         default_df.loc['strm_ubrmse'] = default_ubrmse
         default_df.loc['strm_nse'] = default_nse
+        default_df.loc['strm_nse_ind'] = default_nse_ind
+        default_df.loc['strm_mae'] = default_mae
         default_df.loc['le_avg_diff'] = default_diff_le
         default_df.loc['le_rmse'] = default_rmse_le
         default_df.loc['le_r2'] = default_r2_le
         default_df.loc['le_corr'] = default_corr_le
         default_df.loc['le_ubrmse'] = default_ubrmse_le
+        default_df.loc['strm_rmse_norm'] = default_rmse_normal
         pso_final_df.loc['strm_avg_diff'] = pso_diff
         pso_final_df.loc['strm_rmse'] = pso_rmse
+        pso_final_df.loc['strm_rmse_norm'] = pso_rmse_norm
+        pso_final_df.loc['strm_rmse_norm_ind'] = pso_rmse_norm_ind
         pso_final_df.loc['strm_r2'] = pso_r2
         pso_final_df.loc['strm_corr'] = pso_corr
         pso_final_df.loc['strm_ubrmse'] = pso_ubrmse
         pso_final_df.loc['strm_nse'] = pso_nse
+        pso_final_df.loc['strm_nse_ind'] = pso_nse_ind
+        pso_final_df.loc['strm_mae'] = pso_mae
         pso_final_df.loc['le_avg_diff'] = pso_diff_le
         pso_final_df.loc['le_rmse'] = pso_rmse_le
         pso_final_df.loc['le_r2'] = pso_r2_le
         pso_final_df.loc['le_corr'] = pso_corr_le
         pso_final_df.loc['le_ubrmse'] = pso_ubrmse_le
+        pso_final_df.loc['strm_rmse_norm'] = pso_rmse_normal
         # caluclate rmse for pso_init catchment-cn
         pso_init_diff = np.array(pso_init_strm_yr - waterwatch_strm_int)
         pso_init_se = pso_init_diff**2
@@ -1396,6 +1460,16 @@ class analyze_watershed:
         default_strm_rmse = np.array(default_df.loc['strm_rmse'])
         default_strm_rmse_avg = default_strm_rmse[-1]
         default_strm_rmse = default_strm_rmse[:-1]
+        # normalized rmse for default
+        default_strm_rmse_norm = np.array(default_df.loc['strm_rmse_norm'])
+        default_strm_rmse_norm_avg = default_strm_rmse_norm[-1]
+        default_strm_rmse_norm = default_strm_rmse_norm[:-1]
+        # noramlized and averaged rmse for default
+        default_strm_rmse_norm_ind = np.array(
+            default_df.loc['strm_rmse_norm_ind']
+        )
+        default_strm_rmse_norm_ind_avg = default_strm_rmse_norm_ind[-1]
+        default_strm_rmse_norm_ind = default_strm_rmse_norm_ind[:-1]
         # r2 for the default
         default_strm_r2 = np.array(default_df.loc['strm_r2'])
         default_strm_r2_avg = default_strm_r2[-1]
@@ -1412,6 +1486,10 @@ class analyze_watershed:
         default_strm_nse = np.array(default_df.loc['strm_nse'])
         default_strm_nse_avg = default_strm_nse[-1]
         default_strm_nse = default_strm_nse[:-1]
+        # nse ind for the default
+        default_strm_nse_ind = np.array(default_df.loc['strm_nse_ind'])
+        default_strm_nse_ind_avg = default_strm_nse_ind[-1]
+        default_strm_nse_ind = default_strm_nse_ind[:-1]
         # avg prediction difference for default
         default_strm_avg_diff = np.array(default_df.loc['strm_avg_diff'])
         default_strm_avg_diff_avg = default_strm_avg_diff[-1]
@@ -1424,6 +1502,16 @@ class analyze_watershed:
         final_strm_rmse = np.array(pso_final_df.loc['strm_rmse'])
         final_strm_rmse_avg = final_strm_rmse[-1]
         final_strm_rmse = final_strm_rmse[:-1]
+        # normalized rmse for final
+        final_strm_rmse_norm = np.array(pso_final_df.loc['strm_rmse_norm'])
+        final_strm_rmse_norm_avg = final_strm_rmse_norm[-1]
+        final_strm_rmse_norm = final_strm_rmse_norm[:-1]
+        # noramlized and averaged rmse for final
+        final_strm_rmse_norm_ind = np.array(
+            pso_final_df.loc['strm_rmse_norm_ind']
+        )
+        final_strm_rmse_norm_ind_avg = final_strm_rmse_norm_ind[-1]
+        final_strm_rmse_norm_ind = final_strm_rmse_norm_ind[:-1]
         # r2 for the final
         final_strm_r2 = np.array(pso_final_df.loc['strm_r2'])
         final_strm_r2_avg = final_strm_r2[-1]
@@ -1440,6 +1528,10 @@ class analyze_watershed:
         final_strm_nse = np.array(pso_final_df.loc['strm_nse'])
         final_strm_nse_avg = final_strm_nse[-1]
         final_strm_nse = final_strm_nse[:-1]
+        # nse ind for the final
+        final_strm_nse_ind = np.array(pso_final_df.loc['strm_nse_ind'])
+        final_strm_nse_ind_avg = final_strm_nse_ind[-1]
+        final_strm_nse_ind = final_strm_nse_ind[:-1]
         # avg. streamflow for default
         default_strm = np.array(default_df.loc['strm'])
         default_strm_avg = default_strm[-1]
@@ -1462,6 +1554,32 @@ class analyze_watershed:
             diff_rmse_strm_final,diff_rmse_strm_final_avg
         )
         pso_final_df.loc['change_strm_rmse'] = all_diff_rmse_strm_final
+        # change in normalized rmse for default to final
+        diff_rmse_norm_strm_final = (
+            final_strm_rmse_norm - default_strm_rmse_norm
+        )
+        diff_rmse_norm_strm_final_avg = (
+            final_strm_rmse_norm_avg - default_strm_rmse_norm_avg
+        )
+        all_diff_rmse_norm_strm_final = np.append(
+            diff_rmse_norm_strm_final,diff_rmse_norm_strm_final_avg
+        )
+        pso_final_df.loc['change_strm_rmse_norm'] = (
+            all_diff_rmse_norm_strm_final
+        )
+        # change in individaully normalized rmse default to final
+        diff_rmse_norm_ind_strm_final = (
+            final_strm_rmse_norm_ind - default_strm_rmse_norm_ind
+        )
+        diff_rmse_norm_ind_strm_final_avg = (
+            final_strm_rmse_norm_ind_avg - default_strm_rmse_norm_ind_avg
+        )
+        all_diff_rmse_norm_ind_strm_final = np.append(
+            diff_rmse_norm_ind_strm_final,diff_rmse_norm_ind_strm_final_avg
+        )
+        pso_final_df.loc['change_strm_rmse_norm_ind'] = (
+            all_diff_rmse_norm_ind_strm_final
+        )
         # perc. changes in rmse for default to first
         perc_diff_rmse_strm_init = (
             (init_strm_rmse - default_strm_rmse)/default_strm_rmse
@@ -1514,6 +1632,19 @@ class analyze_watershed:
             diff_nse_strm_final,diff_nse_strm_final_avg
         )
         pso_final_df.loc['change_strm_nse'] = all_diff_nse_strm_final
+        # change in individaully averaged nse from default to final
+        diff_nse_ind_strm_final = (
+            final_strm_nse_ind - default_strm_nse_ind
+        )
+        diff_nse_ind_strm_final_avg = (
+            final_strm_nse_ind_avg - default_strm_nse_ind_avg
+        )
+        all_diff_nse_ind_strm_final = np.append(
+            diff_nse_ind_strm_final,diff_nse_ind_strm_final_avg
+        )
+        pso_final_df.loc['change_strm_nse_ind'] = (
+            all_diff_nse_ind_strm_final
+        )
         # changes in avg. strm default to first
         diff_strm_init = init_strm - default_strm
         diff_strm_init_avg = init_strm_avg - default_strm_avg
@@ -1538,6 +1669,25 @@ class analyze_watershed:
         perc_diff_strm_final_avg = (
             (final_strm_avg - default_strm_avg)/default_strm_avg
         )
+        # default normalized rmse
+        default_strm_rmse_norm = np.array(default_df.loc['strm_rmse_norm'])
+        default_strm_rmse_norm_avg = default_strm_rmse_norm[-1]
+        default_strm_rmse_norm = default_strm_rmse_norm[:-1]
+        # final normalized rmse
+        final_strm_rmse_norm = np.array(pso_final_df.loc['strm_rmse_norm'])
+        final_strm_rmse_norm_avg = final_strm_rmse_norm[-1]
+        final_strm_rmse_norm = final_strm_rmse_norm[:-1]
+        # difference in normalized rmse
+        diff_strm_rmse_norm_final = (
+            final_strm_rmse_norm - default_strm_rmse_norm
+        )
+        diff_strm_rmse_norm_final_avg = (
+            final_strm_rmse_norm_avg - default_strm_rmse_norm_avg
+        )
+        all_diff_strm_rmse_norm_final = np.append(
+            diff_strm_rmse_norm_final,diff_strm_rmse_norm_final_avg
+        )
+        pso_final_df.loc['diff_strm_rmse_norm'] = all_diff_strm_rmse_norm_final
         if make_plots:
             # now let's get the shapes that we need for plotting
             huc6s = gpd.read_file(geojson_fname)
@@ -1629,23 +1779,83 @@ class analyze_watershed:
                 }
             if plot_trim:
                 names = [
-                    'pso_strm_nse'
+                    #'default_strm_rmse',
+                    #'default_strm_rmse_norm',
+                    'final_strm_rmse_norm',
+                    #'default_strm',
+                    'final_strm_rmse',
+                    #'default_strm_rmse_norm_ind',
+                    'final_strm_rmse_norm_ind',
+                    #'default_strm_nse',
+                    'final_strm_nse',
+                    #'default_strm_nse_ind',
+                    'final_strm_nse_ind'
                 ]
                 vals = [
-                    final_strm_nse
+                    #default_strm_rmse,
+                    #default_strm_rmse_norm,
+                    final_strm_rmse_norm,
+                    #default_strm,
+                    final_strm_rmse,
+                    #default_strm_rmse_norm_ind,
+                    final_strm_rmse_norm_ind,
+                    #default_strm_nse,
+                    final_strm_nse,
+                    #default_strm_nse_ind,
+                    final_strm_nse_ind
                 ]
                 avgs = [
-                    final_strm_nse_avg
+                    #default_strm_rmse_avg,
+                    #default_strm_rmse_norm_avg,
+                    final_strm_rmse_norm_avg,
+                    #default_strm_avg,
+                    final_strm_rmse_avg,
+                    #default_strm_rmse_norm_ind_avg,
+                    final_strm_rmse_norm_ind_avg,
+                    #default_strm_nse_avg,
+                    final_strm_nse_avg,
+                    #default_strm_nse_ind_avg,
+                    final_strm_nse_ind_avg
                 ]
                 types = names
                 cmaps = {
-                    names[0]:'bwr'
+                    'default_strm_rmse':'bwr',
+                    'default_strm_rmse_norm':'bwr',
+                    'final_strm_rmse_norm':'bwr',
+                    'default_strm':'bwr',
+                    'final_strm_rmse':'bwr',
+                    'default_strm_rmse_norm_ind':'bwr',
+                    'final_strm_rmse_norm_ind':'bwr',
+                    'default_strm_nse':'bwr',
+                    'final_strm_nse':'bwr',
+                    'default_strm_nse_ind':'bwr',
+                    'final_strm_nse_ind':'bwr'
                 }
                 vmins = {
-                    names[0]:-1
+                    'default_strm_rmse':0,
+                    'default_strm_rmse_norm':0,
+                    'final_strm_rmse_norm':0,
+                    'default_strm':0,
+                    'final_strm_rmse':0,
+                    'default_strm_rmse_norm_ind':0,
+                    'final_strm_rmse_norm_ind':0,
+                    'default_strm_nse':-5,
+                    'final_strm_nse':-1,
+                    'default_strm_nse_ind':-1,
+                    'final_strm_nse_ind':-1
                 }
                 vmaxs = {
-                    names[0]:1
+                    'default_strm_rmse':1.5,
+                    'default_strm_rmse_norm':1.5,
+                    'final_strm_rmse_norm':1.5,
+                    'default_strm':2,
+                    'final_strm_rmse':1.5,
+                    'default_strm_rmse_norm_ind':4,
+                    'final_strm_rmse_norm_ind':1.5,
+                    'default_strm_nse':1,
+                    'final_strm_nse':1,
+                    'default_strm_nse_ind':1,
+                    'final_strm_nse_ind':1
                 }
             print('reading states')
             states = gpd.read_file(states_shp)

@@ -143,6 +143,7 @@ class analyze_pix:
         pft_df['primary_pft'] = all_max_perc_pft
         # and finally let's make the tiles the index
         pft_df = pft_df.set_index('tile')
+        pft_df.to_csv(save_fname)
         return pft_df
     def get_rmse_dict(self,exp_names,exps_dict,fluxcom_timeseries,
                       experiment_type,start_error,end_error):
