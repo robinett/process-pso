@@ -26,7 +26,7 @@ def main():
     # directory for file that holds catchment pixel information
     # location of the catchment tiles to run
     catch_tiles_fname = os.path.join(
-        '/shared/pso/step_1x_choose_tiles/outputs/intersecting_catch_tiles.csv'
+        '/shared/pso/step_1x_choose_tiles_large/outputs/intersecting_catch_tiles.csv'
     )
     # location of the cathment tile info file
     catch_tile_info_fname = os.path.join(

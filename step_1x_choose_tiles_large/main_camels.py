@@ -47,14 +47,16 @@ def main():
         out_dir,'really_chosen_tiles.geojson'
     )
     # because we are subsetting in this section based off of streamflow, we are
-    # going to leverage the fact that streamflow truth processing has already
-    # been done for the larger set, even though this somewhat messes with teh
-    # flow of things
-    # so specify here a truth dataset that has been created for the larger
-    # dataset so that we can subset to remove flows that are too low
-    fullset_strm_truth = (
-        '/shared/pso/step_3.1.1_process_camels/outputs/' +
-        'camels_truth_yearly_1995-01-01_2014-12-31_mm_day.csv'
+    # going to leverage the fact that we need to constrain by the ratio of
+    # streamflow:precipitation and the processing for this has already been
+    # done at a later PSO step, even though this technically messes with the
+    # step 1-5 flow.
+    # so specify here the .csv that contains the streamflow:precip ratios from
+    # CAMELS and MERRA2 so that we can eliminate basins where this is
+    # unerasonable
+    strm_precip_ratio_fname = (
+        '/shared/pso/step_5.1_analyze_outputs/outputs/' +
+        'streamflow_over_rainfall.csv'
     )
     # do we want to reprocess the data? If true, does so and saves. If false,
     # just loads saved processed data
@@ -67,7 +69,7 @@ def main():
         # get this catchment tile intersection infor from these
         outs = (
             ch.get_catch_tiles(
-                tile_fname,camels_boundaries_fname,fullset_strm_truth
+                tile_fname,camels_boundaries_fname,strm_precip_ratio_fname
             )
         )
         intersection_info = outs[0]

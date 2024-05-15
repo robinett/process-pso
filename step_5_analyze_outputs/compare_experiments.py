@@ -56,7 +56,7 @@ class compare_experiments:
         exp_1_le_obs = np.array(exp_1_pix_df.loc['le_obs'])
         exp_1_ubrmse_norm_et = weights[0]*(
             np.nanmean(
-                exp_1_le_ubrmse[:-1]/exp_1_le_obs[:-1]
+                exp_1_le_ubrmse[:-1]/exp_1_le_ubrmse[:-1]
             )
         )
         exp_1_strm_rmse = np.array(exp_1_wat_df.loc['strm_rmse'])
@@ -64,6 +64,17 @@ class compare_experiments:
         exp_1_rmse_norm_strm = weights[1]*(
             np.nanmean(
                 exp_1_strm_rmse[:-1]/exp_1_strm_obs[:-1]
+            )
+        )
+        exp_1_strm_mae = np.array(exp_1_wat_df.loc['strm_mae'])
+        exp_1_mae_norm_strm = weights[1]*(
+            np.nanmean(
+                exp_1_strm_mae[:-1]/exp_1_strm_mae[:-1]
+            )
+        )
+        exp_1_mae_norm_def_strm = weights[1]*(
+            np.nanmean(
+                exp_1_strm_mae[:-1]/exp_1_strm_mae[:-1]
             )
         )
         ## for exp 2
@@ -94,7 +105,7 @@ class compare_experiments:
         exp_2_le_obs = np.array(exp_2_pix_df.loc['le_obs'])
         exp_2_ubrmse_norm_et = weights[0]*(
             np.nanmean(
-                exp_2_le_ubrmse[:-1]/exp_2_le_obs[:-1]
+                exp_2_le_ubrmse[:-1]/exp_1_le_ubrmse[:-1]
             )
         )
         exp_2_strm_rmse = np.array(exp_2_wat_df.loc['strm_rmse'])
@@ -102,6 +113,17 @@ class compare_experiments:
         exp_2_rmse_norm_strm = weights[1]*(
             np.nanmean(
                 exp_2_strm_rmse[:-1]/exp_2_strm_obs[:-1]
+            )
+        )
+        exp_2_strm_mae = np.array(exp_2_wat_df.loc['strm_mae'])
+        exp_2_mae_norm_strm = weights[1]*(
+            np.nanmean(
+                exp_2_strm_mae[:-1]/exp_2_strm_mae[:-1]
+            )
+        )
+        exp_2_mae_norm_def_strm = weights[1]*(
+            np.nanmean(
+                exp_2_strm_mae[:-1]/exp_1_strm_mae[:-1]
             )
         )
         ## for exp 3
@@ -132,7 +154,7 @@ class compare_experiments:
         exp_3_le_obs = np.array(exp_3_pix_df.loc['le_obs'])
         exp_3_ubrmse_norm_et = weights[0]*(
             np.nanmean(
-                exp_3_le_ubrmse[:-1]/exp_3_le_obs[:-1]
+                exp_3_le_ubrmse[:-1]/exp_1_le_ubrmse[:-1]
             )
         )
         exp_3_strm_rmse = np.array(exp_3_wat_df.loc['strm_rmse'])
@@ -140,6 +162,17 @@ class compare_experiments:
         exp_3_rmse_norm_strm = weights[1]*(
             np.nanmean(
                 exp_3_strm_rmse[:-1]/exp_3_strm_obs[:-1]
+            )
+        )
+        exp_3_strm_mae = np.array(exp_3_wat_df.loc['strm_mae'])
+        exp_3_mae_norm_strm = weights[1]*(
+            np.nanmean(
+                exp_3_strm_mae[:-1]/exp_3_strm_mae[:-1]
+            )
+        )
+        exp_3_mae_norm_def_strm = weights[1]*(
+            np.nanmean(
+                exp_3_strm_mae[:-1]/exp_1_strm_mae[:-1]
             )
         )
         ## for exp 4
@@ -170,7 +203,7 @@ class compare_experiments:
         exp_4_le_obs = np.array(exp_4_pix_df.loc['le_obs'])
         exp_4_ubrmse_norm_et = weights[0]*(
             np.nanmean(
-                exp_4_le_ubrmse[:-1]/exp_4_le_obs[:-1]
+                exp_4_le_ubrmse[:-1]/exp_1_le_ubrmse[:-1]
             )
         )
         exp_4_strm_rmse = np.array(exp_4_wat_df.loc['strm_rmse'])
@@ -178,6 +211,17 @@ class compare_experiments:
         exp_4_rmse_norm_strm = weights[1]*(
             np.nanmean(
                 exp_4_strm_rmse[:-1]/exp_4_strm_obs[:-1]
+            )
+        )
+        exp_4_strm_mae = np.array(exp_4_wat_df.loc['strm_mae'])
+        exp_4_mae_norm_strm = weights[1]*(
+            np.nanmean(
+                exp_4_strm_mae[:-1]/exp_4_strm_mae[:-1]
+            )
+        )
+        exp_4_mae_norm_def_strm = weights[1]*(
+            np.nanmean(
+                exp_4_strm_mae[:-1]/exp_1_strm_mae[:-1]
             )
         )
         # lets make the plot
@@ -222,6 +266,18 @@ class compare_experiments:
             exp_2_rmse_norm_strm,
             exp_3_rmse_norm_strm,
             exp_4_rmse_norm_strm
+        ]
+        strm_mae_norm = [
+            exp_1_mae_norm_strm,
+            exp_2_mae_norm_strm,
+            exp_3_mae_norm_strm,
+            exp_4_mae_norm_strm
+        ]
+        strm_mae_def_norm = [
+            exp_1_mae_norm_def_strm,
+            exp_2_mae_norm_def_strm,
+            exp_3_mae_norm_def_strm,
+            exp_4_mae_norm_def_strm
         ]
         # another way to make the plot
         exp_1_et = [
@@ -392,6 +448,29 @@ class compare_experiments:
         plt.legend((p1[0],p2[0]),('ubrmse_norm(ET)','rmse_norm(strm)'))
         save_name = os.path.join(
             plots_dir,'obj_function_rmse_norm_ubrmse_norm_{}.png'.format(
+                'all'
+            )
+        )
+        plt.savefig(save_name,bbox_inches='tight')
+        plt.close()
+        # for ubrmse_norm mae_norm
+        fig = plt.subplots()
+        p1 = plt.bar(ind,et_ubrmse_norm,width)
+        p2 = plt.bar(ind,strm_mae_norm,width,bottom=et_ubrmse_norm)
+        plt.ylabel('J')
+        plt.title('J = ubrmse_norm(ET) + mae_norm(strm)')
+        plt.ylim([0,1])
+        plt.xticks(
+            ind,(
+                exp_1_names[0],
+                exp_1_names[2],
+                exp_2_names[0],
+                exp_2_names[2]
+            ),rotation=45
+        )
+        plt.legend((p1[0],p2[0]),('ubrmse_norm(ET)','mae_norm(strm)'))
+        save_name = os.path.join(
+            plots_dir,'obj_function_mae_norm_ubrmse_norm_{}.png'.format(
                 'all'
             )
         )
@@ -910,23 +989,28 @@ class compare_experiments:
             exp_2_pix_pso_df.loc['ave_le']
         )
         avg_exp_diff_ave_le = exp_diff_ave_le['all']
+        # difference in normalized le ubrmse
+        exp_change_le_ubrmse_norm = (
+            exp_1_pix_pso_df.loc['change_le_ubrmse_norm'] -
+            exp_2_pix_pso_df.loc['change_le_ubrmse_norm']
+        )
+        avg_exp_change_le_ubrmse_norm = (
+            exp_change_le_ubrmse_norm['all']
+        )
         # put values to be plotted into list for plotting
         vals = [
-            exp_perc_change_le_rmse,exp_change_le_r2,exp_change_le_corr,
-            exp_perc_change_le_ubrmse,exp_diff_ave_le,
-            exp_change_le_rmse,exp_change_le_ubrmse
+            exp_diff_ave_le,exp_change_le_ubrmse,
+            exp_change_le_ubrmse_norm
         ]
         # put the averages that correspond to these values
         avgs = [
-            avg_exp_perc_change_le_rmse,avg_exp_change_le_r2,avg_exp_change_le_corr,
-            avg_exp_perc_change_le_ubrmse,avg_exp_diff_ave_le,
-            avg_exp_change_le_rmse,avg_exp_change_le_ubrmse
+            avg_exp_diff_ave_le,avg_exp_change_le_ubrmse,
+            avg_exp_change_le_ubrmse_norm
         ]
         # put the name the corresponds to each of these values
         names = [
-            'exp_perc_change_le_rmse','exp_change_le_r2','exp_change_le_corr',
-            'exp_perc_change_le_ubrmse','exp_diff_ave_le',
-            'exp_change_le_rmse','exp_change_le_ubrmse'
+            'exp_change_ave_le','exp_change_le_ubrmse',
+            'exp_change_le_ubrmse_norm'
         ]
         # vals, avgs, and names need to all be the same length. if this isn't
         # true stop here and inform the user
@@ -941,31 +1025,19 @@ class compare_experiments:
             sys.exit()
         types = names
         cmaps = {
-            'exp_perc_change_le_rmse':'bwr',
-            'exp_change_le_r2':'bwr',
-            'exp_change_le_corr':'bwr',
-            'exp_perc_change_le_ubrmse':'bwr',
-            'exp_diff_ave_le':'bwr',
-            'exp_change_le_rmse':'bwr',
-            'exp_change_le_ubrmse':'bwr'
+            'exp_change_ave_le':'bwr',
+            'exp_change_le_ubrmse':'bwr',
+            'exp_change_le_ubrmse_norm':'bwr'
         }
         vmins = {
-            'exp_perc_change_le_rmse':-.5,
-            'exp_change_le_r2':-.4,
-            'exp_change_le_corr':-.2,
-            'exp_perc_change_le_ubrmse':-.3,
-            'exp_diff_ave_le':-5,
-            'exp_change_le_rmse':-5,
-            'exp_change_le_ubrmse':-10
+            'exp_change_ave_le':-10,
+            'exp_change_le_ubrmse':-10,
+            'exp_change_le_ubrmse_norm':-.25
         }
         vmaxs = {
-            'exp_perc_change_le_rmse':.5,
-            'exp_change_le_r2':.4,
-            'exp_change_le_corr':.2,
-            'exp_perc_change_le_ubrmse':.3,
-            'exp_diff_ave_le':5,
-            'exp_change_le_rmse':5,
-            'exp_change_le_ubrmse':10
+            'exp_change_ave_le':10,
+            'exp_change_le_ubrmse':10,
+            'exp_change_le_ubrmse_norm':.25
         }
         for p in range(len(vals)):
             # let's first plot the rmse of default experiment versus fluxcom
@@ -1112,25 +1184,16 @@ class compare_experiments:
         huc6s = gpd.read_file(geojson_fname)
         # now let's get everythin in arrays for proper plotting
         names = [
-            'exp_change_strm_rmse',
-            'exp_change_strm_rmse_norm',
-            'exp_change_strm_rmse_norm_ind',
-            'exp_change_strm_nse',
-            'exp_change_strm_nse_ind'
+            'exp_diff_strm',
+            'exp_change_strm_rmse_norm'
         ]
         vals = [
-            exp_change_strm_rmse,
-            exp_change_strm_rmse_norm,
-            exp_change_strm_rmse_norm_ind,
-            exp_change_strm_nse,
-            exp_change_strm_nse_ind
+            exp_diff_strm,
+            exp_change_strm_rmse_norm_ind
         ]
         avgs = [
-            avg_exp_change_strm_rmse,
-            avg_exp_change_strm_rmse_norm,
-            avg_exp_change_strm_rmse_norm_ind,
-            avg_exp_change_strm_nse,
-            avg_exp_change_strm_nse_ind
+            avg_exp_diff_strm,
+            avg_exp_change_strm_rmse_norm_ind
         ]
         types = names
         cmaps = {
@@ -1138,21 +1201,24 @@ class compare_experiments:
             'exp_change_strm_rmse_norm':'bwr',
             'exp_change_strm_rmse_norm_ind':'bwr',
             'exp_change_strm_nse':'bwr',
-            'exp_change_strm_nse_ind':'bwr'
+            'exp_change_strm_nse_ind':'bwr',
+            'exp_diff_strm':'bwr'
         }
         vmins = {
             'exp_change_strm_rmse':-.4,
             'exp_change_strm_rmse_norm':-.4,
             'exp_change_strm_rmse_norm_ind':-1,
             'exp_change_strm_nse':-1,
-            'exp_change_strm_nse_ind':-1
+            'exp_change_strm_nse_ind':-1,
+            'exp_diff_strm':-1
         }
         vmaxs = {
             'exp_change_strm_rmse':.4,
             'exp_change_strm_rmse_norm':.4,
             'exp_change_strm_rmse_norm_ind':1,
             'exp_change_strm_nse':1,
-            'exp_change_strm_nse_ind':1
+            'exp_change_strm_nse_ind':1,
+            'exp_diff_strm':1
         }
         print('reading states')
         states = gpd.read_file(states_shp)

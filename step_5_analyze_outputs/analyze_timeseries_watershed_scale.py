@@ -198,6 +198,7 @@ class analyze_watershed:
                 pso_final_le_np,axis=1,weights=this_perc
             )
             pso_final_all_le[:,w] = pso_final_le_avg
+            # for observed precip
         times = list(pso_final_runoff.index)
         times_err = list(fluxcom_le.index)
         # for default stream
@@ -309,7 +310,8 @@ class analyze_watershed:
             plt.close()
     def get_rmse_dict(self,outs,lai_fname,intersection_info,all_tiles,
                       start_err,end_err,plot_timeseries,exp_names,
-                      plots_dir):
+                      plots_dir,plot_watershed_error_hist,get_metf,
+                      out_dir,out_err_fname):
         # let's start by analyzing stream data
         default_strm = outs['default_strm']
         waterwatch_strm = outs['waterwatch_strm']
@@ -318,6 +320,8 @@ class analyze_watershed:
         default_le = outs['default_le']
         pso_le = outs['pso_final_le']
         fluxcom_le = outs['fluxcom_le']
+        if get_metf:
+            obs_precip = outs['default_rainfsnowf']
         # let's trim these to only our analysis days
         start_fmt = start_err.strftime('%Y%m%d')
         end_fmt = end_err.strftime('%Y%m%d')
@@ -399,6 +403,13 @@ class analyze_watershed:
             fluxcom_le_avg,fluxcom_le_avg.mean())
         default_df.loc['le_obs'] = fluxcom_le_avg
         pso_final_df.loc['le_obs'] = fluxcom_le_avg
+        # and for observed precipitation
+        if get_metf:
+            obs_precip_avg = np.array(obs_precip.mean())
+            obs_precip_avg = np.append(
+                obs_precip_avg,obs_precip_avg.mean()
+            )
+            default_df.loc['precip_obs'] = obs_precip_avg
         # let's get the rmse for the different senarios
         catch_cols = list(default_strm.columns)
         waterwatch_strm_int = waterwatch_strm.set_axis(catch_cols,axis=1)
@@ -459,7 +470,8 @@ class analyze_watershed:
                     )
                 )
                 this_default_strm = default_strm_yr[wat]
-                this_pso_strm = pso_final_strm_yr[wat]
+                this_pso_init_strm = pso_init_strm_yr[wat]
+                this_pso_final_strm = pso_final_strm_yr[wat]
                 this_waterwatch_strm = waterwatch_strm_int[wat]
                 this_exp = exp_names[2]
                 savename = os.path.join(
@@ -469,19 +481,19 @@ class analyze_watershed:
                 )
                 plt.figure()
                 plt.plot(
-                    dates_dtm,this_default_strm,label='Default streamflow',
+                    dates_dtm,this_default_strm,label='CN4.5 EF It. 1',
                     c='r',marker='o'#linewidth=.8
                 )
                 plt.plot(
-                    dates_dtm,this_waterwatch_strm,label='CAMELS Streamflow',
+                    dates_dtm,this_waterwatch_strm,label='CAMELS',
                     c='k',marker='o'#linewidth=.8
                 )
-                #plt.plot(
-                #    dates_dtm,this_default_runoff,label='PSO iteration 1',
-                #    c='y',linewidth=.8
-                #)
                 plt.plot(
-                    dates_dtm,this_pso_strm,label='PSO final iteration',
+                    dates_dtm,this_pso_init_strm,label='CN4.5 EF It. 4',
+                    c='y',marker='o'#,linewidth=.8
+                )
+                plt.plot(
+                    dates_dtm,this_pso_final_strm,label='CN4.5 EF It. 8',
                     c='g',marker='o'#linewidth=.8
                 )
                 plt.legend()
@@ -520,6 +532,8 @@ class analyze_watershed:
         pso_nse_avg = np.zeros(len(catch_cols))
         default_mae = np.zeros(len(catch_cols))
         pso_mae = np.zeros(len(catch_cols))
+        pso_mae_norm_def = np.zeros(len(catch_cols))
+        pso_mae_norm_def = np.zeros(len(catch_cols))
         default_diff_le = np.zeros(len(catch_cols))
         pso_diff_le = np.zeros(len(catch_cols))
         default_rmse_le = np.zeros(len(catch_cols))
@@ -692,17 +706,77 @@ class analyze_watershed:
             )
             this_pso_nse = 1 - nse_numerator/nse_denom
             # calculate the default mae
-            this_default_mae = np.sum(
+            this_default_mae = np.mean(
                 np.abs(
                     this_waterwatch - this_default
                 )
-            ).mean()
+            )
             # calculate the pso mae
-            this_pso_mae = np.sum(
+            this_pso_mae = np.mean(
                 np.abs(
                     this_waterwatch - this_pso
                 )
-            ).mean()
+            )
+            # let's just look at the error distributions
+            this_wat_err = np.abs(
+                this_waterwatch - this_default
+            )
+            # calculate hte pso mae normalized by default error
+            this_pso_mae_norm_def = np.mean(
+                np.abs(
+                    this_waterwatch - this_pso
+                )
+            )
+            this_pso_mae_norm_def = (
+                this_pso_mae_norm_def/this_default_mae
+            )
+            #this_wat_err = this_wat_err - np.mean(this_wat_err)
+            #this_wat_err = this_wat_err/np.std(this_wat_err)
+            if plot_watershed_error_hist:
+                save_name = os.path.join(
+                    plots_dir,
+                    'wat_error_hist_{}.png'.format(col)
+                )
+                bin_width = 0.1
+                plt.figure()
+                plt.hist(
+                    this_wat_err,
+                    bins=7
+                    #bins=np.arange(
+                    #    min(this_wat_err),
+                    #    max(this_wat_err) + bin_width,
+                    #    bin_width
+                    #)
+                )
+                plt.savefig(save_name)
+                plt.close()
+                this_wat_err_log = np.abs(
+                    this_waterwatch - this_default
+                )
+                this_wat_err_log = np.log(this_wat_err_log)
+                #this_wat_err_log = this_wat_err_log - np.mean(
+                #    this_wat_err_log
+                #)
+                #this_wat_err_log = this_wat_err_log/np.std(
+                #    this_wat_err_log
+                #)
+                save_name = os.path.join(
+                    plots_dir,
+                    'wat_error_hist_{}_log.png'.format(col)
+                )
+                bin_width_log = 0.05
+                plt.figure()
+                plt.hist(
+                    this_wat_err_log,
+                    bins=7
+                    #bins=np.arange(
+                    #    min(this_wat_err_log),
+                    #    max(this_wat_err_log) + bin_width_log,
+                    #    bin_width_log
+                    #)
+                )
+                plt.savefig(save_name)
+                plt.close()
             # add to running error metrics
             default_diff[c] = this_default_diff
             pso_diff[c] = this_pso_diff
@@ -720,6 +794,7 @@ class analyze_watershed:
             pso_nse[c] = this_pso_nse
             default_mae[c] = this_default_mae
             pso_mae[c] = this_pso_mae
+            pso_mae_norm_def[c] = this_pso_mae_norm_def
             # calculate the default difference in average
             element_default_diff_le = this_default_le - this_fluxcom
             this_default_diff_le = np.mean(element_default_diff_le)
@@ -1040,9 +1115,21 @@ class analyze_watershed:
         # calculate the mae for default all
         all_default_mae = np.mean(default_mae)
         default_mae = np.append(default_mae,all_default_mae)
+        if out_err_fname != 'none':
+            to_save = default_mae[:-1]
+            to_save.tofile(
+                os.path.join(
+                    out_dir,
+                    out_err_fname
+                ),
+                sep = ','
+            )
         # calculate the mae for pso all
         all_pso_mae = np.mean(pso_mae)
         pso_mae = np.append(pso_mae,all_pso_mae)
+        # calculate the default mae normalized mae
+        all_pso_mae_norm_def = np.mean(pso_mae_norm_def)
+        pso_mae_norm_def = np.append(pso_mae_norm_def,all_pso_mae_norm_def)
         # calculate the diff for default all
         all_avg_fluxcom_le = np.average(fluxcom_le_np)
         all_avg_default_le = np.average(default_le_np)
@@ -1199,6 +1286,7 @@ class analyze_watershed:
         pso_final_df.loc['strm_nse'] = pso_nse
         pso_final_df.loc['strm_nse_ind'] = pso_nse_ind
         pso_final_df.loc['strm_mae'] = pso_mae
+        pso_final_df.loc['strm_mae_norm_def'] = pso_mae_norm_def
         pso_final_df.loc['le_avg_diff'] = pso_diff_le
         pso_final_df.loc['le_rmse'] = pso_rmse_le
         pso_final_df.loc['le_r2'] = pso_r2_le
@@ -1449,7 +1537,7 @@ class analyze_watershed:
         plt.savefig(savename_fluxcom_diff_le)
         plt.close()
     def plot_maps(self,rmse_dfs,plots_dir,geojson_fname,exp_names,states_shp,
-                  make_plots,plot_trim):
+                  make_plots,plot_trim,get_metf,chosen_huc6s_fname):
         # extract the different error dfs
         default_df = rmse_dfs[0]
         pso_init_df = rmse_dfs[1]
@@ -1490,6 +1578,10 @@ class analyze_watershed:
         default_strm_nse_ind = np.array(default_df.loc['strm_nse_ind'])
         default_strm_nse_ind_avg = default_strm_nse_ind[-1]
         default_strm_nse_ind = default_strm_nse_ind[:-1]
+        # mae for the default
+        default_strm_mae = np.array(default_df.loc['strm_mae'])
+        default_strm_mae_avg = default_strm_mae[-1]
+        default_strm_mae = default_strm_mae[:-1]
         # avg prediction difference for default
         default_strm_avg_diff = np.array(default_df.loc['strm_avg_diff'])
         default_strm_avg_diff_avg = default_strm_avg_diff[-1]
@@ -1544,6 +1636,10 @@ class analyze_watershed:
         final_strm = np.array(pso_final_df.loc['strm'])
         final_strm_avg = final_strm[-1]
         final_strm = final_strm[:-1]
+        # mae normalized by defualt for final
+        final_mae_norm_def = np.array(pso_final_df.loc['strm_mae_norm_def'])
+        final_mae_norm_def_avg = final_mae_norm_def[-1]
+        final_mae_norm_def = final_mae_norm_def[:-1]
         # changes in rmse for default to first
         diff_rmse_strm_init = init_strm_rmse - default_strm_rmse
         diff_rmse_strm_init_avg = init_strm_rmse_avg - default_strm_rmse_avg
@@ -1687,10 +1783,91 @@ class analyze_watershed:
         all_diff_strm_rmse_norm_final = np.append(
             diff_strm_rmse_norm_final,diff_strm_rmse_norm_final_avg
         )
+        #print(diff_rmse_norm_ind_strm_final_avg)
         pso_final_df.loc['diff_strm_rmse_norm'] = all_diff_strm_rmse_norm_final
+        # stream observations
+        huc6s = np.array(default_df.columns)
+        strm_obs = np.array(pso_final_df.loc['strm_obs'])
+        strm_obs_avg = strm_obs[-1]
+        strm_obs = strm_obs[:-1]
+        print('for mae normalized by default mae')
+        print(final_mae_norm_def_avg)
+        deleting_vals = copy.deepcopy(final_mae_norm_def)
+        num_delete = 4
+        iteration = 1
+        while iteration <= num_delete:
+            deleting_idx = np.where(deleting_vals != np.min(deleting_vals))
+            deleting_idx_opp = np.where(deleting_vals == np.min(deleting_vals))
+            deleting_vals = deleting_vals[deleting_idx]
+            deleting_avg = np.mean(deleting_vals)
+            print('basin: {}'.format(huc6s[deleting_idx_opp]))
+            print('default mae: {}'.format(default_strm_mae[deleting_idx_opp]))
+            print('{} deleted: {}'.format(iteration,deleting_avg))
+            iteration += 1
+        #sys.exit()
+        print('for rmse normalized by average streamflow')
+        print(final_strm_rmse_norm_ind)
+        print(diff_rmse_norm_ind_strm_final_avg)
+        small_obs = np.where(strm_obs < 0.0105)
+        big_obs = np.array(np.where(strm_obs > 0.0105))[0]
+        print(small_obs)
+        print(big_obs)
+        print(huc6s[small_obs])
+        print(strm_obs[small_obs])
+        print(final_strm_rmse_norm_ind[small_obs])
+        rmse_big_obs_final = final_strm_rmse_norm_ind[big_obs]
+        rmse_big_obs_final_avg = np.mean(rmse_big_obs_final)
+        rmse_big_obs_default = default_strm_rmse_norm_ind[big_obs]
+        rmse_big_obs_default_avg = np.mean(rmse_big_obs_default)
+        diff_strm_rmse_norm_ind_final_big = (
+            rmse_big_obs_final_avg - rmse_big_obs_default_avg
+        )
+        #all_diff_strm_rmse_norm_ind_final[-1] = (
+        #    diff_strm_rmse_norm_ind_final_big
+        #)
+        print(diff_strm_rmse_norm_ind_final_big)
+        #sys.exit()
+        #pso_final_df.loc['diff_strm_rmse_norm'] = all_diff_strm_rmse_norm_final
+        # default ratio
+        default_strm_ratio = default_strm/strm_obs
+        default_strm_ratio_avg = default_strm_avg/strm_obs_avg
+        # let's plot streamflow versus area-weighted precip to see how things
+        # are looking on the measurement side
+        huc6s = gpd.read_file(geojson_fname)
+        huc6s_area_df = pd.read_csv(chosen_huc6s_fname)
+        hucs = list(default_df.columns)
+        print(huc6s)
+        print(huc6s_area_df)
+        print(default_df.loc['precip_obs'])
+        #sys.exit()
+        hucs = hucs[:-1]
+        if get_metf:
+            areas = np.zeros(len(hucs))
+            for h,huc in enumerate(hucs):
+                this_idx = np.where(
+                    huc6s_area_df['camel'] == huc
+                )[0][0]
+                areas[h] = huc6s_area_df['area'].iloc[this_idx]
+            obs_precip = np.array(default_df.loc['precip_obs'])[:-1]
+            area_weighted_precip = areas*obs_precip
+            obs_strm = np.array(default_df.loc['strm_obs'])[:-1]
+            print(default_df.loc['precip_obs'])
+            print(obs_strm)
+            sys.exit()
+            norm_area_weighted_precip = obs_strm/area_weighted_precip
+            norm_area_weighted_precip_avg = np.mean(norm_area_weighted_precip)
+            x_vals = np.arange(len(obs_precip))
+            save_name = os.path.join(
+                plots_dir,
+                'precip_runoff_ratio_scatter.png'
+            )
+            plt.figure(figsize=(40,5))
+            plt.scatter(x_vals,norm_area_weighted_precip)
+            plt.xticks(x_vals,hucs,rotation=90)
+            plt.savefig(save_name,bbox_inches='tight')
+            plt.close()
         if make_plots:
             # now let's get the shapes that we need for plotting
-            huc6s = gpd.read_file(geojson_fname)
             if not plot_trim:
                 # now let's get everythin in arrays for proper plotting
                 names = [
@@ -1751,13 +1928,13 @@ class analyze_watershed:
                     'perc_diff_strm_rmse'
                 ]
                 cmaps = {
-                    'strm_rmse':'winter',
-                    'strm':'winter',
+                    'strm_rmse':'rainbow',
+                    'strm':'rainbow',
                     'diff_strm_rmse':'bwr',
                     'perc_diff_strm_rmse':'bwr',
                     'diff_strm':'bwr',
                     'perc_diff_strm':'bwr',
-                    'strm_r2':'winter'
+                    'strm_r2':'rainbow'
                 }
                 vmins = {
                     'strm_rmse':0,
@@ -1779,83 +1956,71 @@ class analyze_watershed:
                 }
             if plot_trim:
                 names = [
-                    #'default_strm_rmse',
-                    #'default_strm_rmse_norm',
-                    'final_strm_rmse_norm',
-                    #'default_strm',
-                    'final_strm_rmse',
-                    #'default_strm_rmse_norm_ind',
-                    'final_strm_rmse_norm_ind',
-                    #'default_strm_nse',
-                    'final_strm_nse',
-                    #'default_strm_nse_ind',
-                    'final_strm_nse_ind'
+                    #'final_strm_rmse',
+                    #'final_strm_rmse_norm_ind',
+                    #'diff_rmse_norm_ind_strm_final'
+                    #'default_strm'
+                    #'diff_strm_final'
+                    #'default_strm_obs',
+                    #'default_strm_ratio'
+                    #'norm_area_weighted_precip'
+                    'final_mae_norm_def'
                 ]
                 vals = [
-                    #default_strm_rmse,
-                    #default_strm_rmse_norm,
-                    final_strm_rmse_norm,
-                    #default_strm,
-                    final_strm_rmse,
-                    #default_strm_rmse_norm_ind,
-                    final_strm_rmse_norm_ind,
-                    #default_strm_nse,
-                    final_strm_nse,
-                    #default_strm_nse_ind,
-                    final_strm_nse_ind
+                    #final_strm_rmse,
+                    #final_strm_rmse_norm_ind,
+                    #diff_rmse_norm_ind_strm_final
+                    #default_strm
+                    #diff_strm_final
+                    #strm_obs,
+                    #default_strm_ratio
+                    #norm_area_weighted_precip
+                    final_mae_norm_def
                 ]
                 avgs = [
-                    #default_strm_rmse_avg,
-                    #default_strm_rmse_norm_avg,
-                    final_strm_rmse_norm_avg,
-                    #default_strm_avg,
-                    final_strm_rmse_avg,
-                    #default_strm_rmse_norm_ind_avg,
-                    final_strm_rmse_norm_ind_avg,
-                    #default_strm_nse_avg,
-                    final_strm_nse_avg,
-                    #default_strm_nse_ind_avg,
-                    final_strm_nse_ind_avg
+                    #final_strm_rmse_avg,
+                    #final_strm_rmse_norm_ind_avg,
+                    #diff_rmse_norm_ind_strm_final_avg
+                    #default_strm_avg
+                    #diff_strm_final_avg
+                    #strm_obs_avg,
+                    #default_strm_ratio_avg
+                    #norm_area_weighted_precip_avg
+                    final_mae_norm_def_avg
                 ]
                 types = names
                 cmaps = {
-                    'default_strm_rmse':'bwr',
-                    'default_strm_rmse_norm':'bwr',
-                    'final_strm_rmse_norm':'bwr',
-                    'default_strm':'bwr',
-                    'final_strm_rmse':'bwr',
-                    'default_strm_rmse_norm_ind':'bwr',
-                    'final_strm_rmse_norm_ind':'bwr',
-                    'default_strm_nse':'bwr',
-                    'final_strm_nse':'bwr',
-                    'default_strm_nse_ind':'bwr',
-                    'final_strm_nse_ind':'bwr'
+                    'final_strm_rmse':'rainbow',
+                    'final_strm_rmse_norm_ind':'rainbow',
+                    'diff_rmse_norm_ind_strm_final':'bwr',
+                    'default_strm':'rainbow',
+                    'diff_strm_final':'bwr',
+                    'default_strm_obs':'rainbow',
+                    'default_strm_ratio':'rainbow',
+                    'norm_area_weighted_precip':'rainbow',
+                    'final_mae_norm_def':'rainbow'
                 }
                 vmins = {
-                    'default_strm_rmse':0,
-                    'default_strm_rmse_norm':0,
-                    'final_strm_rmse_norm':0,
-                    'default_strm':0,
                     'final_strm_rmse':0,
-                    'default_strm_rmse_norm_ind':0,
                     'final_strm_rmse_norm_ind':0,
-                    'default_strm_nse':-5,
-                    'final_strm_nse':-1,
-                    'default_strm_nse_ind':-1,
-                    'final_strm_nse_ind':-1
+                    'diff_rmse_norm_ind_strm_final':-5,
+                    'default_strm':0,
+                    'diff_strm_final':-1,
+                    'default_strm_obs':0,
+                    'default_strm_ratio':0,
+                    'norm_area_weighted_precip':0,
+                    'final_mae_norm_def':0
                 }
                 vmaxs = {
-                    'default_strm_rmse':1.5,
-                    'default_strm_rmse_norm':1.5,
-                    'final_strm_rmse_norm':1.5,
-                    'default_strm':2,
                     'final_strm_rmse':1.5,
-                    'default_strm_rmse_norm_ind':4,
                     'final_strm_rmse_norm_ind':1.5,
-                    'default_strm_nse':1,
-                    'final_strm_nse':1,
-                    'default_strm_nse_ind':1,
-                    'final_strm_nse_ind':1
+                    'diff_rmse_norm_ind_strm_final':5,
+                    'default_strm':0.1,
+                    'diff_strm_final':1,
+                    'default_strm_obs':0.1,
+                    'default_strm_ratio':30,
+                    'norm_area_weighted_precip':1e12,
+                    'final_mae_norm_def':3
                 }
             print('reading states')
             states = gpd.read_file(states_shp)
@@ -1918,7 +2083,7 @@ class analyze_watershed:
                 )
                 this_savename = os.path.join(
                     plots_dir,
-                    '{name}_{exp}_huc6.png'.format(
+                    '{name}_{exp}_iteration.png'.format(
                         name=names[n],exp=exp_names[2]
                     )
                 )

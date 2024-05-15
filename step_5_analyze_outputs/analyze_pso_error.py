@@ -41,7 +41,7 @@ class analyze_pso:
                 'a0', # 7
                 'a1', # 8
                 'a2' # 9
-        ]
+            ]
         return parameter_names
     def plot_parameter_convergence(self,all_info,parameter_names,plots_dir,
                                    exp_names):
@@ -49,7 +49,7 @@ class analyze_pso:
         # get the iterations that the pso ran
         iteration_str = list(all_info.keys())
         #num_iterations = len(iteration_str)
-        iterations_considered = 8
+        iterations_considered = 5
         num_iterations = iterations_considered
         iterations = np.zeros(iterations_considered)
         for t in range(iterations_considered):
@@ -77,7 +77,7 @@ class analyze_pso:
                     iterations,this_param_this_part,
                     label='Particle {}'.format(part)
                 )
-            plt.legend()
+            #plt.legend()
             this_savename = os.path.join(
                 plots_dir,
                 'pso_{param}_movement_{exp}.png'.format(
@@ -93,7 +93,7 @@ class analyze_pso:
                 iterations,this_part_obj,
                 label='Particle {}'.format(part)
             )
-        plt.legend()
+        #plt.legend()
         this_savename = os.path.join(
             plots_dir,
             'pso_objective_value_movement_{exp}.png'.format(
@@ -448,19 +448,19 @@ class analyze_pso:
             b_ppet_strm
         )
         # let's make sure default streamflow error is normally distributed
-        strm_rmse_normalized = strm_rmse - np.mean(
-            strm_rmse
-        )
-        strm_rmse_normalized = strm_rmse_normalized/np.std(
-            strm_rmse_normalized
-        )
+        strm_rmse_normalized = strm_rmse# - np.mean(
+        #    strm_rmse
+        #)
+        #strm_rmse_normalized = strm_rmse_normalized/np.std(
+        #    strm_rmse_normalized
+        #)
         strm_rmse_norm = strm_rmse/strm_obs
-        strm_rmse_norm_normalized = strm_rmse_norm - np.mean(
-            strm_rmse_norm
-        )
-        strm_rmse_norm_normalized = strm_rmse_norm_normalized/np.std(
-            strm_rmse_norm_normalized
-        )
+        strm_rmse_norm_normalized = strm_rmse_norm# - np.mean(
+        #    strm_rmse_norm
+        #)
+        #strm_rmse_norm_normalized = strm_rmse_norm_normalized/np.std(
+        #    strm_rmse_norm_normalized
+        #)
         binwidth = 0.15
         plt.figure()
         plt.hist(
@@ -498,19 +498,19 @@ class analyze_pso:
         print(np.shape(too_small_idx))
         strm_rmse_big = strm_rmse[big_enough_idx]
         strm_obs_big = strm_obs[big_enough_idx]
-        strm_rmse_big_normalized = strm_rmse_big - np.mean(
-            strm_rmse_big
-        )
-        strm_rmse_big_normalized = strm_rmse_big_normalized/np.std(
-            strm_rmse_big_normalized
-        )
+        strm_rmse_big_normalized = strm_rmse_big# - np.mean(
+        #    strm_rmse_big
+        #)
+        #strm_rmse_big_normalized = strm_rmse_big_normalized/np.std(
+        #    strm_rmse_big_normalized
+        #)
         strm_rmse_big_norm = strm_rmse_big/strm_obs_big
-        strm_rmse_big_norm_normalized = strm_rmse_big_norm - np.mean(
-            strm_rmse_norm
-        )
-        strm_rmse_big_norm_normalized = strm_rmse_big_norm_normalized/np.std(
-            strm_rmse_big_norm_normalized
-        )
+        strm_rmse_big_norm_normalized = strm_rmse_big_norm# - np.mean(
+        #    strm_rmse_norm
+        #)
+        #strm_rmse_big_norm_normalized = strm_rmse_big_norm_normalized/np.std(
+        #    strm_rmse_big_norm_normalized
+        ##)
         plt.figure()
         plt.hist(
             strm_rmse_big_normalized,
@@ -541,19 +541,19 @@ class analyze_pso:
         )
         plt.savefig(save_name)
         plt.close()
-        strm_mae_normalized = strm_mae - np.mean(
-            strm_mae
-        )
-        strm_mae_normalized = strm_mae_normalized/np.std(
-            strm_mae_normalized
-        )
+        strm_mae_normalized = strm_mae# - np.mean(
+        #    strm_mae
+        #)
+        #strm_mae_normalized = strm_mae_normalized/np.std(
+        #    strm_mae_normalized
+        #)
         strm_mae_norm = strm_mae/strm_obs
-        strm_mae_norm_normalized = strm_mae_norm - np.mean(
-            strm_mae_norm
-        )
-        strm_mae_norm_normalized = strm_mae_norm_normalized/np.std(
-            strm_mae_norm_normalized
-        )
+        strm_mae_norm_normalized = strm_mae_norm# - np.mean(
+        #    strm_mae_norm
+        #)
+        #strm_mae_norm_normalized = strm_mae_norm_normalized/np.std(
+        #    strm_mae_norm_normalized
+        #)
         plt.figure()
         plt.hist(
             strm_mae_normalized,
@@ -590,19 +590,19 @@ class analyze_pso:
         print(np.shape(too_small_idx))
         strm_mae_big = strm_mae[big_enough_idx]
         strm_obs_big = strm_obs[big_enough_idx]
-        strm_mae_big_normalized = strm_mae_big - np.mean(
-            strm_mae_big
-        )
-        strm_mae_big_normalized = strm_mae_big_normalized/np.std(
-            strm_mae_big_normalized
-        )
+        strm_mae_big_normalized = strm_mae_big #- np.mean(
+        #    strm_mae_big
+        #)
+        #strm_mae_big_normalized = strm_mae_big_normalized/np.std(
+        #    strm_mae_big_normalized
+        #)
         strm_mae_big_norm = strm_mae_big/strm_obs_big
-        strm_mae_big_norm_normalized = strm_mae_big_norm - np.mean(
-            strm_mae_norm
-        )
-        strm_mae_big_norm_normalized = strm_mae_big_norm_normalized/np.std(
-            strm_mae_big_norm_normalized
-        )
+        strm_mae_big_norm_normalized = strm_mae_big_norm# - np.mean(
+        #    strm_mae_norm
+        #)
+        #strm_mae_big_norm_normalized = strm_mae_big_norm_normalized/np.std(
+        #    strm_mae_big_norm_normalized
+        #)
         plt.figure()
         plt.hist(
             strm_mae_big_normalized,
@@ -633,7 +633,6 @@ class analyze_pso:
         )
         plt.savefig(save_name)
         plt.close()
-        sys.exit()
         # let's just look at within-PFT variability
         p_d = pft_dist()
         pft_distribution = p_d.get_pso_pfts(pft_info,intersection_info)
@@ -1179,163 +1178,164 @@ class analyze_pso:
                 plt.savefig(save_name)
         # let's run my fun experiment for estimating a0, a1, and a2
         # possibilities
-        print(default_df)
-        le_obs = np.array(default_df.loc['le_obs'])
-        le_obs = le_obs[not_nan_idx]
-        g1_copied = copy.deepcopy(le_obs)
-        max_le = np.max(g1_copied)
-        min_le = np.min(g1_copied)
-        g1_init = (g1_copied - min_le)/(max_le - min_le)
-        g1_init = g1_init*3.5
-        g1_init = g1_init + 0.5
-        too_small_idx = np.where(g1_init < 0.5)
-        g1_init[too_small_idx] = 0.5
-        num_loops = 1000
-        a0s = np.zeros(num_loops)
-        a1s = np.zeros(num_loops)
-        a2s = np.zeros(num_loops)
-        r2s = np.zeros(num_loops)
-        min_g1 = np.zeros(num_loops)
-        max_g1 = np.zeros(num_loops)
-        mean_g1 = np.zeros(num_loops)
-        std_g1 = np.zeros(num_loops)
-        mu = 0
-        sigma = 1
-        num_g1s = len(le_obs)
-        for l in range(num_loops):
-            if l % 10 == 0:
-                print('iteration {}'.format(l))
-            noise = np.random.normal(mu,sigma,num_g1s)
-            this_g1 = g1_init + noise
-            #this_g1 = np.random.rand(len(g1_init))
-            #this_g1 = this_g1*4.5
-            #this_g1 = this_g1 + 0.5
-            too_small_idx = np.where(this_g1 < 0.5)
-            this_g1[too_small_idx] = 0.5
-            min_g1[l] = np.min(this_g1)
-            max_g1[l] = np.max(this_g1)
-            mean_g1[l] = np.mean(this_g1)
-            std_g1[l] = np.std(this_g1)
-            this_data = pd.DataFrame(
-                {
-                    'precip':gldas_precip_norm,
-                    'canopy_height':can_norm,
-                    'g1':this_g1
-                }
-            )
-            model_g1 = ols("g1 ~ precip + canopy_height",this_data).fit()
-            this_coefs = model_g1._results.params
-            a0s[l] = this_coefs[0]
-            a1s[l] = this_coefs[1]
-            a2s[l] = this_coefs[2]
-            r2s[l] = model_g1.rsquared
-        min_a0 = np.min(a0s)
-        max_a0 = np.max(a0s)
-        mean_a0 = np.mean(a0s)
-        std_a0 = np.std(a0s)
-        ovr_min_g1 = np.mean(min_g1)
-        ovr_max_g1 = np.mean(max_g1)
-        ovr_mean_g1 = np.mean(mean_g1)
-        ovr_std_g1 = np.mean(std_g1)
-        min_a1 = np.min(a1s)
-        max_a1 = np.max(a1s)
-        mean_a1 = np.mean(a1s)
-        std_a1 = np.std(a1s)
-        min_a2 = np.min(a2s)
-        max_a2 = np.max(a2s)
-        mean_a2 = np.mean(a2s)
-        std_a2 = np.std(a2s)
-        min_r2 = np.min(r2s)
-        max_r2 = np.max(r2s)
-        mean_r2 = np.mean(r2s)
-        std_r2 = np.std(r2s)
-        print('|  var  |  min  |  max  |  mean |  std  |')
-        print('|-------|-------|-------|-------|-------|')
-        print(
-            '| {} | {} | {} | {} | {} |'.format(
-                ' g1  ',
-                str(ovr_min_g1)[:5].ljust(5),
-                str(ovr_max_g1)[:5],
-                str(ovr_mean_g1)[:5],
-                str(ovr_std_g1)[:5]
-            )
-        )
-        print(
-            '| {} | {} | {} | {} | {} |'.format(
-                ' a0  ',
-                str(min_a0)[:5],
-                str(max_a0)[:5],
-                str(mean_a0)[:5],
-                str(std_a0)[:5]
-            )
-        )
-        print(
-            '| {} | {} | {} | {} | {} |'.format(
-                ' a1  ',
-                str(min_a1)[:5],
-                str(max_a1)[:5],
-                str(mean_a1)[:5],
-                str(std_a1)[:5]
-            )
-        )
-        print(
-            '| {} | {} | {} | {} | {} |'.format(
-                ' a2  ',
-                str(min_a2)[:5],
-                str(max_a2)[:5],
-                str(mean_a2)[:5],
-                str(std_a2)[:5]
-            )
-        )
-        print(
-            '| {} | {} | {} | {} | {} |'.format(
-                ' r2  ',
-                str(min_r2)[:5],
-                str(max_r2)[:5],
-                str(mean_r2)[:5],
-                str(std_r2)[:5]
-            )
-        )
+        #print(default_df)
+        #le_obs = np.array(default_df.loc['le_obs'])
+        #le_obs = le_obs[not_nan_idx]
+        #g1_copied = copy.deepcopy(le_obs)
+        #max_le = np.max(g1_copied)
+        #min_le = np.min(g1_copied)
+        #g1_init = (g1_copied - min_le)/(max_le - min_le)
+        #g1_init = g1_init*3.5
+        #g1_init = g1_init + 0.5
+        #too_small_idx = np.where(g1_init < 0.5)
+        #g1_init[too_small_idx] = 0.5
+        #num_loops = 1000
+        #a0s = np.zeros(num_loops)
+        #a1s = np.zeros(num_loops)
+        #a2s = np.zeros(num_loops)
+        #r2s = np.zeros(num_loops)
+        #min_g1 = np.zeros(num_loops)
+        #max_g1 = np.zeros(num_loops)
+        #mean_g1 = np.zeros(num_loops)
+        #std_g1 = np.zeros(num_loops)
+        #mu = 0
+        #sigma = 1
+        #num_g1s = len(le_obs)
+        #for l in range(num_loops):
+        #    if l % 10 == 0:
+        #        print('iteration {}'.format(l))
+        #    noise = np.random.normal(mu,sigma,num_g1s)
+        #    this_g1 = g1_init + noise
+        #    #this_g1 = np.random.rand(len(g1_init))
+        #    #this_g1 = this_g1*4.5
+        #    #this_g1 = this_g1 + 0.5
+        #    too_small_idx = np.where(this_g1 < 0.5)
+        #    this_g1[too_small_idx] = 0.5
+        #    min_g1[l] = np.min(this_g1)
+        #    max_g1[l] = np.max(this_g1)
+        #    mean_g1[l] = np.mean(this_g1)
+        #    std_g1[l] = np.std(this_g1)
+        #    this_data = pd.DataFrame(
+        #        {
+        #            'precip':gldas_precip_norm,
+        #            'canopy_height':can_norm,
+        #            'g1':this_g1
+        #        }
+        #    )
+        #    model_g1 = ols("g1 ~ precip + canopy_height",this_data).fit()
+        #    this_coefs = model_g1._results.params
+        #    a0s[l] = this_coefs[0]
+        #    a1s[l] = this_coefs[1]
+        #    a2s[l] = this_coefs[2]
+        #    r2s[l] = model_g1.rsquared
+        #min_a0 = np.min(a0s)
+        #max_a0 = np.max(a0s)
+        #mean_a0 = np.mean(a0s)
+        #std_a0 = np.std(a0s)
+        #ovr_min_g1 = np.mean(min_g1)
+        #ovr_max_g1 = np.mean(max_g1)
+        #ovr_mean_g1 = np.mean(mean_g1)
+        #ovr_std_g1 = np.mean(std_g1)
+        #min_a1 = np.min(a1s)
+        #max_a1 = np.max(a1s)
+        #mean_a1 = np.mean(a1s)
+        #std_a1 = np.std(a1s)
+        #min_a2 = np.min(a2s)
+        #max_a2 = np.max(a2s)
+        #mean_a2 = np.mean(a2s)
+        #std_a2 = np.std(a2s)
+        #min_r2 = np.min(r2s)
+        #max_r2 = np.max(r2s)
+        #mean_r2 = np.mean(r2s)
+        #std_r2 = np.std(r2s)
+        #print('|  var  |  min  |  max  |  mean |  std  |')
+        #print('|-------|-------|-------|-------|-------|')
+        #print(
+        #    '| {} | {} | {} | {} | {} |'.format(
+        #        ' g1  ',
+        #        str(ovr_min_g1)[:5].ljust(5),
+        #        str(ovr_max_g1)[:5],
+        #        str(ovr_mean_g1)[:5],
+        #        str(ovr_std_g1)[:5]
+        #    )
+        #)
+        #print(
+        #    '| {} | {} | {} | {} | {} |'.format(
+        #        ' a0  ',
+        #        str(min_a0)[:5],
+        #        str(max_a0)[:5],
+        #        str(mean_a0)[:5],
+        #        str(std_a0)[:5]
+        #    )
+        #)
+        #print(
+        #    '| {} | {} | {} | {} | {} |'.format(
+        #        ' a1  ',
+        #        str(min_a1)[:5],
+        #        str(max_a1)[:5],
+        #        str(mean_a1)[:5],
+        #        str(std_a1)[:5]
+        #    )
+        #)
+        #print(
+        #    '| {} | {} | {} | {} | {} |'.format(
+        #        ' a2  ',
+        #        str(min_a2)[:5],
+        #        str(max_a2)[:5],
+        #        str(mean_a2)[:5],
+        #        str(std_a2)[:5]
+        #    )
+        #)
+        #print(
+        #    '| {} | {} | {} | {} | {} |'.format(
+        #        ' r2  ',
+        #        str(min_r2)[:5],
+        #        str(max_r2)[:5],
+        #        str(mean_r2)[:5],
+        #        str(std_r2)[:5]
+        #    )
+        #)
         #sys.exit()
         # get the global best parameters from the PSO
         iteration_keys = list(all_info.keys())
-        iterations_considered = 8
+        iterations_considered = 5
         this_it_key = iteration_keys[iterations_considered-1]
         best_positions = all_info[this_it_key]['global_best_positions']
         # assign these positions to their relevant variables
-        a0_g1_dict = {
-            'Needleleaf evergreen temperate tree':best_positions[0],
-            'Needleleaf evergreen boreal tree':best_positions[0],
-            'Needleleaf deciduous boreal tree':best_positions[0],
-            'Broadleaf evergreen tropical tree':best_positions[1],
-            'Broadleaf evergreen temperate tree':best_positions[1],
-            'Broadleaf deciduous tropical tree':best_positions[2],
-            'Broadleaf deciduous temperate tree':best_positions[2],
-            'Broadleaf deciduous boreal tree':best_positions[2],
-            'Broadleaf evergreen temperate shrub':best_positions[3],
-            'Broadleaf deciduous boreal shrub':best_positions[3],
-            'Broadleaf deciduous temperate shrub':best_positions[3],
-            'Broadleaf deciduous temperate shrub[moisture +deciduous]': (
-                best_positions[3]
-            ),
-            'Broadleaf deciduous temperate shrub[moisture stress only]': (
-                best_positions[3]
-            ),
-            'Arctic c3 grass':best_positions[4],
-            'Cool c3 grass':best_positions[5],
-            'Cool c3 grass [moisture + deciduous]':best_positions[5],
-            'Cool c3 grass [moisture stress only]':best_positions[5],
-            'Warm c4 grass [moisture + deciduous]':best_positions[6],
-            'Warm c4 grass [moisture stress only]':best_positions[6],
-            'Warm c4 grass':best_positions[6],
-            'Crop':best_positions[7],
-            'Crop [moisture + deciduous]':best_positions[7],
-            'Crop [moisture stress only]':best_positions[7],
-            '(Spring temperate cereal)':best_positions[7],
-            '(Irrigated corn)':best_positions[7],
-            '(Soybean)':best_positions[7],
-            '(Corn)':best_positions[7]
-        }
+        if self.optimization_type == 'pft':
+            a0_g1_dict = {
+                'Needleleaf evergreen temperate tree':best_positions[0],
+                'Needleleaf evergreen boreal tree':best_positions[0],
+                'Needleleaf deciduous boreal tree':best_positions[0],
+                'Broadleaf evergreen tropical tree':best_positions[1],
+                'Broadleaf evergreen temperate tree':best_positions[1],
+                'Broadleaf deciduous tropical tree':best_positions[1],
+                'Broadleaf deciduous temperate tree':best_positions[1],
+                'Broadleaf deciduous boreal tree':best_positions[1],
+                'Broadleaf evergreen temperate shrub':best_positions[2],
+                'Broadleaf deciduous boreal shrub':best_positions[2],
+                'Broadleaf deciduous temperate shrub':best_positions[2],
+                'Broadleaf deciduous temperate shrub[moisture +deciduous]': (
+                    best_positions[2]
+                ),
+                'Broadleaf deciduous temperate shrub[moisture stress only]': (
+                    best_positions[2]
+                ),
+                'Arctic c3 grass':best_positions[3],
+                'Cool c3 grass':best_positions[3],
+                'Cool c3 grass [moisture + deciduous]':best_positions[3],
+                'Cool c3 grass [moisture stress only]':best_positions[3],
+                'Warm c4 grass [moisture + deciduous]':best_positions[4],
+                'Warm c4 grass [moisture stress only]':best_positions[4],
+                'Warm c4 grass':best_positions[4],
+                'Crop':best_positions[5],
+                'Crop [moisture + deciduous]':best_positions[5],
+                'Crop [moisture stress only]':best_positions[5],
+                '(Spring temperate cereal)':best_positions[5],
+                '(Irrigated corn)':best_positions[5],
+                '(Soybean)':best_positions[5],
+                '(Corn)':best_positions[5]
+            }
         default_g1_dict = {
             'Needleleaf evergreen temperate tree':2.3,
             'Needleleaf evergreen boreal tree':2.3,
@@ -1366,75 +1366,48 @@ class analyze_pso:
             '(Corn)':5.79
         }
         if self.optimization_type == 'ef':
-            a1_g1_dict = {
-                'Needleleaf evergreen temperate tree':best_positions[8],
-                'Needleleaf evergreen boreal tree':best_positions[8],
-                'Needleleaf deciduous boreal tree':best_positions[8],
-                'Broadleaf evergreen tropical tree':best_positions[9],
-                'Broadleaf evergreen temperate tree':best_positions[9],
-                'Broadleaf deciduous tropical tree':best_positions[10],
-                'Broadleaf deciduous temperate tree':best_positions[10],
-                'Broadleaf deciduous boreal tree':best_positions[10],
-                'Broadleaf evergreen temperate shrub':best_positions[11],
-                'Broadleaf deciduous boreal shrub':best_positions[11],
-                'Broadleaf deciduous temperate shrub':best_positions[11],
+            bi_g1_dict = {
+                'Needleleaf evergreen temperate tree':best_positions[0],
+                'Needleleaf evergreen boreal tree':best_positions[0],
+                'Needleleaf deciduous boreal tree':best_positions[0],
+                'Broadleaf evergreen tropical tree':best_positions[1],
+                'Broadleaf evergreen temperate tree':best_positions[1],
+                'Broadleaf deciduous tropical tree':best_positions[1],
+                'Broadleaf deciduous temperate tree':best_positions[1],
+                'Broadleaf deciduous boreal tree':best_positions[1],
+                'Broadleaf evergreen temperate shrub':best_positions[2],
+                'Broadleaf deciduous boreal shrub':best_positions[2],
+                'Broadleaf deciduous temperate shrub':best_positions[2],
                 'Broadleaf deciduous temperate shrub[moisture +deciduous]': (
-                    best_positions[11]
+                    best_positions[2]
                 ),
                 'Broadleaf deciduous temperate shrub[moisture stress only]': (
-                    best_positions[11]
+                    best_positions[2]
                 ),
-                'Arctic c3 grass':best_positions[12],
-                'Cool c3 grass':best_positions[13],
-                'Cool c3 grass [moisture + deciduous]':best_positions[13],
-                'Cool c3 grass [moisture stress only]':best_positions[13],
-                'Warm c4 grass [moisture + deciduous]':best_positions[14],
-                'Warm c4 grass [moisture stress only]':best_positions[15],
-                'Warm c4 grass':best_positions[14],
-                'Crop':best_positions[15],
-                'Crop [moisture + deciduous]':best_positions[15],
-                'Crop [moisture stress only]':best_positions[15],
-                '(Spring temperate cereal)':best_positions[15],
-                '(Irrigated corn)':best_positions[15],
-                '(Soybean)':best_positions[15],
-                '(Corn)':best_positions[15]
+                'Arctic c3 grass':best_positions[3],
+                'Cool c3 grass':best_positions[3],
+                'Cool c3 grass [moisture + deciduous]':best_positions[3],
+                'Cool c3 grass [moisture stress only]':best_positions[3],
+                'Warm c4 grass [moisture + deciduous]':best_positions[4],
+                'Warm c4 grass [moisture stress only]':best_positions[4],
+                'Warm c4 grass':best_positions[4],
+                'Crop':best_positions[5],
+                'Crop [moisture + deciduous]':best_positions[5],
+                'Crop [moisture stress only]':best_positions[5],
+                '(Spring temperate cereal)':best_positions[5],
+                '(Irrigated corn)':best_positions[5],
+                '(Soybean)':best_positions[5],
+                '(Corn)':best_positions[5]
             }
-            a2_g1_dict = {
-                'Needleleaf evergreen temperate tree':best_positions[16],
-                'Needleleaf evergreen boreal tree':best_positions[16],
-                'Needleleaf deciduous boreal tree':best_positions[16],
-                'Broadleaf evergreen tropical tree':best_positions[17],
-                'Broadleaf evergreen temperate tree':best_positions[17],
-                'Broadleaf deciduous tropical tree':best_positions[18],
-                'Broadleaf deciduous temperate tree':best_positions[18],
-                'Broadleaf deciduous boreal tree':best_positions[18],
-                'Broadleaf evergreen temperate shrub':best_positions[19],
-                'Broadleaf deciduous boreal shrub':best_positions[19],
-                'Broadleaf deciduous temperate shrub':best_positions[19],
-                'Broadleaf deciduous temperate shrub[moisture +deciduous]': (
-                    best_positions[19]
-                ),
-                'Broadleaf deciduous temperate shrub[moisture stress only]': (
-                    best_positions[19]
-                ),
-                'Arctic c3 grass':best_positions[20],
-                'Cool c3 grass':best_positions[21],
-                'Cool c3 grass [moisture + deciduous]':best_positions[21],
-                'Cool c3 grass [moisture stress only]':best_positions[21],
-                'Warm c4 grass [moisture + deciduous]':best_positions[22],
-                'Warm c4 grass [moisture stress only]':best_positions[22],
-                'Warm c4 grass':best_positions[22],
-                'Crop':best_positions[23],
-                'Crop [moisture + deciduous]':best_positions[23],
-                'Crop [moisture stress only]':best_positions[23],
-                '(Spring temperate cereal)':best_positions[23],
-                '(Irrigated corn)':best_positions[23],
-                '(Soybean)':best_positions[23],
-                '(Corn)':best_positions[23]
-            }
+            a0 = best_positions[6]
+            a1 = best_positions[7]
+            a2 = best_positions[8]
         if all_info_compare != 'none':
+            compare_iterations_considered = 5
+            compare_keys = list(all_info_compare.keys())
+            this_compare_key = compare_keys[compare_iterations_considered-1]
             best_positions_compare = (
-                all_info_compare[this_it_key]['global_best_positions']
+                all_info_compare[this_compare_key]['global_best_positions']
             )
             aj_g1_dict = {
                 'Needleleaf evergreen temperate tree':best_positions_compare[0],
@@ -1442,32 +1415,32 @@ class analyze_pso:
                 'Needleleaf deciduous boreal tree':best_positions_compare[0],
                 'Broadleaf evergreen tropical tree':best_positions_compare[1],
                 'Broadleaf evergreen temperate tree':best_positions_compare[1],
-                'Broadleaf deciduous tropical tree':best_positions_compare[2],
-                'Broadleaf deciduous temperate tree':best_positions_compare[2],
-                'Broadleaf deciduous boreal tree':best_positions_compare[2],
-                'Broadleaf evergreen temperate shrub':best_positions_compare[3],
-                'Broadleaf deciduous boreal shrub':best_positions_compare[3],
-                'Broadleaf deciduous temperate shrub':best_positions_compare[3],
+                'Broadleaf deciduous tropical tree':best_positions_compare[1],
+                'Broadleaf deciduous temperate tree':best_positions_compare[1],
+                'Broadleaf deciduous boreal tree':best_positions_compare[1],
+                'Broadleaf evergreen temperate shrub':best_positions_compare[2],
+                'Broadleaf deciduous boreal shrub':best_positions_compare[2],
+                'Broadleaf deciduous temperate shrub':best_positions_compare[2],
                 'Broadleaf deciduous temperate shrub[moisture +deciduous]': (
-                    best_positions_compare[3]
+                    best_positions_compare[2]
                 ),
                 'Broadleaf deciduous temperate shrub[moisture stress only]': (
-                    best_positions_compare[3]
+                    best_positions_compare[2]
                 ),
-                'Arctic c3 grass':best_positions_compare[4],
-                'Cool c3 grass':best_positions_compare[5],
-                'Cool c3 grass [moisture + deciduous]':best_positions_compare[5],
-                'Cool c3 grass [moisture stress only]':best_positions_compare[5],
-                'Warm c4 grass [moisture + deciduous]':best_positions_compare[6],
-                'Warm c4 grass [moisture stress only]':best_positions_compare[6],
-                'Warm c4 grass':best_positions_compare[6],
-                'Crop':best_positions_compare[7],
-                'Crop [moisture + deciduous]':best_positions_compare[7],
-                'Crop [moisture stress only]':best_positions_compare[7],
-                '(Spring temperate cereal)':best_positions_compare[7],
-                '(Irrigated corn)':best_positions_compare[7],
-                '(Soybean)':best_positions_compare[7],
-                '(Corn)':best_positions_compare[7]
+                'Arctic c3 grass':best_positions_compare[3],
+                'Cool c3 grass':best_positions_compare[3],
+                'Cool c3 grass [moisture + deciduous]':best_positions_compare[3],
+                'Cool c3 grass [moisture stress only]':best_positions_compare[3],
+                'Warm c4 grass [moisture + deciduous]':best_positions_compare[4],
+                'Warm c4 grass [moisture stress only]':best_positions_compare[4],
+                'Warm c4 grass':best_positions_compare[4],
+                'Crop':best_positions_compare[5],
+                'Crop [moisture + deciduous]':best_positions_compare[5],
+                'Crop [moisture stress only]':best_positions_compare[5],
+                '(Spring temperate cereal)':best_positions_compare[5],
+                '(Irrigated corn)':best_positions_compare[5],
+                '(Soybean)':best_positions_compare[5],
+                '(Corn)':best_positions_compare[5]
         }
         #ksat_alpha = best_positions[5]
         ksat_alpha = 4.5
@@ -1517,6 +1490,8 @@ class analyze_pso:
             a1_term = np.zeros(len(pso_g1_init))
             a2_term = np.zeros(len(pso_g1_init))
             a1_a2_term = np.zeros(len(pso_g1_init))
+            a0_a1_a2_term = np.zeros(len(pso_g1_init))
+            bi_term = np.zeros(len(pso_g1_init))
             for g,g1 in enumerate(pso_g1_init):
                 this_perc = [
                     pft_info['pft_1_perc'].loc[tiles[g]],
@@ -1530,21 +1505,23 @@ class analyze_pso:
                     pft_info['pft_3_name'].loc[tiles[g]],
                     pft_info['pft_4_name'].loc[tiles[g]]
                 ]
-                effective_a0 = 0
-                effective_a1 = 0
-                effective_a2 = 0
+                effective_bi = 0
                 for p,perc in enumerate(this_perc):
-                    effective_a0 += (perc/100)*a0_g1_dict[this_pfts[p]]
-                    effective_a1 += (perc/100)*a1_g1_dict[this_pfts[p]]
-                    effective_a2 += (perc/100)*a2_g1_dict[this_pfts[p]]
+                    effective_bi += (perc/100)*bi_g1_dict[this_pfts[p]]
                 pso_g1[g] = (
-                    effective_a0 + effective_a1*norm_precip_vals[g] +
-                    effective_a2*norm_canopy_vals[g]
+                    effective_bi*(
+                        a0 + a1*norm_precip_vals[g] +
+                        a2*norm_canopy_vals[g]
+                    )
                 )
-                a0_term[g] = effective_a0
-                a1_term[g] = effective_a1*norm_precip_vals[g]
-                a2_term[g] = effective_a2*norm_canopy_vals[g]
+                bi_term[g] = effective_bi
+                a0_term[g] = a0
+                a1_term[g] = a1*norm_precip_vals[g]
+                a2_term[g] = a2*norm_canopy_vals[g]
                 a1_a2_term[g] = a1_term[g] + a2_term[g]
+                a0_a1_a2_term[g] = (
+                    a0_term[g] + a1_term[g] + a2_term[g]
+                )
             pso_g1 = np.where(pso_g1 < 0.5, 0.5, pso_g1)
         if self.optimization_type == 'pft':
             pso_g1_init = np.zeros(len(norm_precip_vals))
@@ -1636,17 +1613,20 @@ class analyze_pso:
                 'perc_diff_pso_g1',
                 'a0_term_map',
                 'a1_term_map','a2_term_map',
-                'a1_a2_term_map','exp_diff_g1'
+                'a1_a2_term_map','exp_diff_g1',
+                'a0_a1_a2_term','bi_term'
             ]
             vals = [
                 default_g1,pso_g1,diff_pso_g1,
                 perc_diff_pso_g1,a0_term,a1_term,
-                a2_term,a1_a2_term,compare_g1_diff
+                a2_term,a1_a2_term,compare_g1_diff,
+                a0_a1_a2_term,bi_term
             ]
             plot_type = [
                 'g1','g1','diff_g1',
-                'perc_diff','g1_term','g1_term','g1_term',
-                'g1_term','diff_g1_compare'
+                'perc_diff','a0','a1','a2',
+                'a1a2','diff_g1_compare','a0a1a2',
+                'bi'
             ]
         elif self.optimization_type == 'ef' and all_info_compare == 'none':
             names = [
@@ -1655,17 +1635,19 @@ class analyze_pso:
                 'perc_diff_pso_g1',
                 'a0_term_map',
                 'a1_term_map','a2_term_map',
-                'a1_a2_term_map'
+                'a1_a2_term_map','a0_a1_a2_term',
+                'bi_term'
             ]
             vals = [
                 default_g1,pso_g1,diff_pso_g1,
                 perc_diff_pso_g1,a0_term,a1_term,
-                a2_term,a1_a2_term
+                a2_term,a1_a2_term,a0_a1_a2_term,
+                bi_term
             ]
             plot_type = [
                 'g1','g1','diff_g1',
-                'perc_diff','g1_term','g1_term','g1_term',
-                'g1_term'
+                'perc_diff','a0','a1','a2',
+                'a1a2','a0a1a2','bi'
             ]
         elif self.optimization_type == 'pft':
             names = [
@@ -1681,25 +1663,40 @@ class analyze_pso:
                 'g1','g1','diff_g1','perc_diff'
             ]
         cmaps = {
-            'g1':'bwr',
+            'g1':'rainbow',
             'diff_g1':'bwr',
             'perc_diff':'bwr',
-            'g1_term':'bwr',
-            'diff_g1_compare':'bwr'
+            'a0':'bwr',
+            'a1':'bwr',
+            'a2':'bwr',
+            'a1a2':'bwr',
+            'a0a1a2':'bwr',
+            'diff_g1_compare':'bwr',
+            'bi':'bwr'
         }
         vmins = {
             'g1':0,
             'diff_g1':-6,
             'perc_diff':-6,
-            'g1_term':-5,
-            'diff_g1_compare':-5
+            'a0':-10,
+            'a1':-5,
+            'a2':-5,
+            'a1a2':-5,
+            'a0a1a2':-10,
+            'diff_g1_compare':-5,
+            'bi':-1
         }
         vmaxs = {
             'g1':3,
             'diff_g1':6,
             'perc_diff':5,
-            'g1_term':5,
-            'diff_g1_compare':5
+            'a0':10,
+            'a1':5,
+            'a2':5,
+            'a1a2':5,
+            'a0a1a2':10,
+            'diff_g1_compare':5,
+            'bi':1
         }
         for p in range(len(vals)):
             # let's first plot the rmse of default experiment versus fluxcom

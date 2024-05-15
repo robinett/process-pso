@@ -21,11 +21,11 @@ def main():
     )
     # what is the filename for the intersecting tiles?
     tiles_fname = (
-        '/shared/pso/step_1x_choose_tiles/outputs/intersecting_catch_tiles.csv'
+        '/shared/pso/step_1x_choose_tiles_large/outputs/intersecting_catch_tiles.csv'
     )
     # what is the filename for the camels basins we have chosen?
     chosen_camels_fname = (
-        '/shared/pso/step_1x_choose_tiles/outputs/chosen_camels.csv'
+        '/shared/pso/step_1x_choose_tiles_large/outputs/chosen_camels.csv'
     )
     # what are the start and end dates?
     start = datetime.date(1995,1,1)

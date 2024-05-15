@@ -16,7 +16,7 @@ class choose:
         # set the random seed for repredocible results
         np.random.seed(123)
     def get_catch_tiles(self,tile_fname,camels_boundaries_fname,
-                        fullset_strm_truth
+                        strm_precip_ratio_fname
                        ):
         # get the catchment tile info
         tile_info = pd.read_csv(tile_fname)
@@ -82,8 +82,14 @@ class choose:
         print(tile_gdf_m)
         # let's get streamflow for the basins that we know are greater than
         # 1000km
-        streamflows = pd.read_csv(fullset_strm_truth)
-        print(streamflows)
+        # we're going to need the ratio of streamflow:precip to screen which
+        # basins to run
+        ratio_df = pd.read_csv(
+            strm_precip_ratio_fname
+        )
+        ratio_df = ratio_df.set_index('ratio')
+        ratio_df.columns = ratio_df.columns.map(int)
+        print(ratio_df)
         # we're going to want to save these areas for later use
         camels_areas = np.zeros(0)
         chosen_camels = []
@@ -103,18 +109,17 @@ class choose:
             this_camel_area_km = this_camel_m.area/(10**6)
             intersects = list(tile_gdf_m.intersects(this_camel_m))
             # let's get the average streamflow
-            if str(huc) in streamflows.columns:
-                this_yearly = np.array(
-                    streamflows[str(huc)]
+            if huc in ratio_df.columns:
+                this_ratio = np.array(
+                    ratio_df[huc].loc['strm_over_rainfall']
                 )
-                this_yearly_avg = np.nanmean(this_yearly)
             else:
-                this_yearly_avg = 0
+                this_ratio = 0
             for i,it in enumerate(intersects):
                 if (
                     it and
                     this_camel_area_km > 1000 and
-                    this_yearly_avg > 0.05
+                    this_ratio > 0.01
                 ):
                     # get the polygon for the intersecting tile
                     this_tile = tile_idx[i]
@@ -140,8 +145,8 @@ class choose:
                         )
             print('size of this camel (km): {}'.format(this_camel_area_km))
             print(
-                'the streamflow of this camel (mm/d) : {}'.format(
-                    this_yearly_avg
+                'the runoff over precip ratio of this wat : {}'.format(
+                    this_ratio
                 )
             )
             print(

@@ -233,7 +233,7 @@ def main():
     pixels = t.get_pixels(step_1_pixels_fname)
     # print the variables that exist for your info, if desired
     # exits after doing this
-    #t.print_catch_variables(default_experiment)
+    t.print_catch_variables(default_experiment)
     # put the out_dicts for each experiment into a larger dictionary where the
     # key for this dictionary is the name of the experiment
     catch_timeseries = {}

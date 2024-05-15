@@ -146,7 +146,8 @@ class analyze_pix:
         pft_df.to_csv(save_fname)
         return pft_df
     def get_rmse_dict(self,exp_names,exps_dict,fluxcom_timeseries,
-                      experiment_type,start_error,end_error):
+                      experiment_type,start_error,end_error,out_dir,
+                      save_default_error):
         '''
         Function to generate a dictionary containing all of the RMSE
         information that we could want. For this dictionary, each key will be
@@ -245,10 +246,12 @@ class analyze_pix:
         default_all_le_r2 = np.zeros(len(this_cols))
         default_all_le_corr = np.zeros(len(this_cols))
         default_all_le_ubrmse = np.zeros(len(this_cols))
+        default_all_le_ubrmse_norm = np.zeros(len(this_cols))
         for p,pix in enumerate(pixels):
             # get the default and fluxcom le
             this_default_le = np.array(default_le[pix])
             this_fluxcom = np.array(fluxcom_timeseries[pix])
+            this_avg_obs = np.nanmean(this_fluxcom)
             # get the locations where we want to calculate
             this_calc_idx = np.where(
                 (this_default_le > 0) & (np.isnan(this_fluxcom) == False)
@@ -320,6 +323,8 @@ class analyze_pix:
                         )**2
                     ).mean()
                 )
+                # get pixel-normalized ubrmse
+                this_ubrmse_norm = this_ubrmse/this_avg_obs
             else:
                 this_rmse = np.nan
                 this_r2 = np.nan
@@ -329,6 +334,7 @@ class analyze_pix:
             default_all_le_r2[p] = this_r2
             default_all_le_corr[p] = this_le_corr
             default_all_le_ubrmse[p] = this_ubrmse
+            default_all_le_ubrmse_norm[p] = this_ubrmse_norm
         # now let's get the rmse for all pixels for the 'all' column
         fluxcom_np = np.array(fluxcom_timeseries)
         default_le_np = np.array(default_le)
@@ -399,15 +405,29 @@ class analyze_pix:
                 )**2
             ).mean()
         )
+        # calculate the normalized ubrmse everywhere
+        ubrmse_norm_all = np.nanmean(default_all_le_ubrmse_norm[:-1])
+        # add these to their arrays
         default_all_le_rmse[-1] = rmse_all
         default_all_le_r2[-1] = le_r2_all
         default_all_le_corr[-1] = le_corr_all
         default_all_le_ubrmse[-1] = ubrmse_all
+        default_all_le_ubrmse_norm[-1] = ubrmse_norm_all
         # add this to the default dataframe
         default_df.loc['le_rmse'] = default_all_le_rmse
         default_df.loc['le_r2'] = default_all_le_r2
         default_df.loc['le_corr'] = default_all_le_corr
         default_df.loc['le_ubrmse'] = default_all_le_ubrmse
+        default_df.loc['le_ubrmse_norm'] = default_all_le_ubrmse_norm
+        if save_default_error != 'none':
+            error_no_all = default_all_le_ubrmse[:-1]
+            error_no_all.tofile(
+                os.path.join(
+                    out_dir,
+                    save_default_error
+                ),
+                sep = ','
+            )
         # for this, there is no percent change in rmse, because this is the
         # baseline off which percent change will be caluclated. will fill with
         # nans
@@ -467,9 +487,11 @@ class analyze_pix:
         pso_all_le_r2 = np.zeros(len(this_cols))
         pso_all_le_corr = np.zeros(len(this_cols))
         pso_all_le_ubrmse = np.zeros(len(this_cols))
+        pso_all_le_ubrmse_norm = np.zeros(len(this_cols))
         for p,pix in enumerate(pixels):
             this_pso_le = np.array(pso_le[pix])
             this_fluxcom = np.array(fluxcom_timeseries[pix])
+            this_avg_obs = np.nanmean(this_fluxcom)
             # get where we want to calculate
             this_calc_idx = np.where(
                 (this_pso_le > 0) & (np.isnan(this_fluxcom) == False)
@@ -539,6 +561,8 @@ class analyze_pix:
                         )**2
                     ).mean()
                 )
+                # calculate the normalized unbiased rmse
+                this_ubrmse_norm = this_ubrmse/this_avg_obs
             else:
                 this_rmse = np.nan
                 this_r2 = np.nan
@@ -548,6 +572,7 @@ class analyze_pix:
             pso_all_le_r2[p] = this_r2
             pso_all_le_corr[p] = this_le_corr
             pso_all_le_ubrmse[p] = this_ubrmse
+            pso_all_le_ubrmse_norm[p] = this_ubrmse_norm
         # now let's get the rmse for all pixels for the 'all' column
         fluxcom_np = np.array(fluxcom_timeseries)
         pso_le_np = np.array(pso_le)
@@ -616,15 +641,20 @@ class analyze_pix:
                 )**2
             ).mean()
         )
+        # calculate the normalized ubrmse as the average
+        ubrmse_norm_all = np.mean(pso_all_le_ubrmse_norm[:-1])
+        # add these to their respective arrays
         pso_all_le_rmse[-1] = rmse_all
         pso_all_le_r2[-1] = le_r2_all
         pso_all_le_corr[-1] = le_corr_all
         pso_all_le_ubrmse[-1] = ubrmse_all
+        pso_all_le_ubrmse_norm[-1] = ubrmse_norm_all
         # add this to the pso dataframe
         pso_df.loc['le_rmse'] = pso_all_le_rmse
         pso_df.loc['le_r2'] = pso_all_le_r2
         pso_df.loc['le_corr'] = pso_all_le_corr
         pso_df.loc['le_ubrmse'] = pso_all_le_ubrmse
+        pso_df.loc['le_ubrmse_norm'] = pso_all_le_ubrmse_norm
         # calculate what percent change in rmse this is compared to the first
         # iteration
         change_le_rmse = pso_all_le_rmse - default_all_le_rmse
@@ -639,10 +669,16 @@ class analyze_pix:
         perc_change_le_ubrmse = (
             change_le_ubrmse/default_all_le_ubrmse
         )
+        change_le_ubrsme_norm = (
+            pso_all_le_ubrmse_norm - default_all_le_ubrmse_norm
+        )
         pso_df.loc['change_le_r2'] = change_le_r2
         pso_df.loc['change_le_corr'] = change_le_corr
         pso_df.loc['change_le_ubrmse'] = change_le_ubrmse
         pso_df.loc['perc_change_le_ubrmse'] = perc_change_le_ubrmse
+        pso_df.loc['change_le_ubrmse_norm'] = (
+            change_le_ubrsme_norm
+        )
         # now caluclate the rmse after the first iteration
         # get information
         first_it_dict = exps_dict[exp_names[1]]
@@ -756,19 +792,19 @@ class analyze_pix:
             )
             plt.figure()
             plt.plot(
-                dates_dtm,this_default,label='CN4.5 Medlyn g1=PFT default',
+                dates_dtm,this_default,label='CN4.5 EF It. 1',
                 c='r',linewidth=.8
             )
             plt.plot(
-                dates_dtm,this_fluxcom,label='FluxCom',
+                dates_dtm,this_fluxcom,label='GLEAM',
                 c='k',linewidth=.8
             )
             plt.plot(
-                dates_dtm,this_first_it,label='CN4.5 PSO Init.',
+                dates_dtm,this_first_it,label='CN4.5 EF It. 4',
                 c='y',linewidth=.8
             )
             plt.plot(
-                dates_dtm,this_final_it,label='CN4.5 Medlyn g1=EF+PSO',
+                dates_dtm,this_final_it,label='CN4.5 EF It. 8',
                 c='g',linewidth=.8
             )
             plt.legend()
@@ -804,20 +840,23 @@ class analyze_pix:
             )
             plt.figure()
             plt.plot(
-                dates_dtm_2010_2012,this_default_2010_2012,label='CN4.5 Medlyn g1=PFT default',
-                c='r',linewidth=.8
+                dates_dtm_2010_2012,this_default_2010_2012,
+                label='CN4.5 EF It. 1',
+                c='r',linewidth=.5
             )
             plt.plot(
-                dates_dtm_2010_2012,this_fluxcom_2010_2012,label='FluxCom',
-                c='k',linewidth=.8
+                dates_dtm_2010_2012,this_fluxcom_2010_2012,label='GLEAM',
+                c='k',linewidth=.5
             )
             plt.plot(
-                dates_dtm_2010_2012,this_first_it_2010_2012,label='CN4.5 PSO Init.',
-                c='y',linewidth=.8
+                dates_dtm_2010_2012,this_first_it_2010_2012,
+                label='CN4.5 EF It. 4',
+                c='y',linewidth=.5
             )
             plt.plot(
-                dates_dtm_2010_2012,this_final_it_2010_2012,label='CN4.5 Medlyn g1=EF+PSO',
-                c='g',linewidth=.8
+                dates_dtm_2010_2012,this_final_it_2010_2012,
+                label='CN4.5 EF It. 8',
+                c='g',linewidth=.5
             )
             plt.legend()
             plt.xlabel('Date')
@@ -915,6 +954,9 @@ class analyze_pix:
         # change in ubrmse
         change_le_ubrmse = pso_df.loc['change_le_ubrmse']
         avg_change_le_ubrmse = change_le_ubrmse['all']
+        # change in ubrmse norm
+        change_le_ubrmse_norm = pso_df.loc['change_le_ubrmse_norm']
+        avg_change_le_ubrmse_norm = change_le_ubrmse_norm['all']
         # combine all relevant information into lists to be plotted:
             # exps are the name of the experiments
             # vals are the values of the actual poitns
@@ -927,14 +969,14 @@ class analyze_pix:
                 exp_names[0],exp_names[2],exp_names[1],exp_names[2],exp_names[1],
                 exp_names[0],exp_names[0],exp_names[0],exp_names[2],exp_names[2],
                 exp_names[2],exp_names[2],exp_names[2],exp_names[2],exp_names[2],
-                exp_names[2],exp_names[2]
+                exp_names[2],exp_names[2],exp_names[2]
             ]
             vals = [
                 default_le_rmse,pso_le_rmse,pso_first_it_le_rmse,perc_change_le_rmse,
                 perc_change_le_rmse_first_it,diff_le_default,default_le_r2,
                 default_le_corr,pso_le_r2,pso_le_corr,change_le_r2,change_le_corr,
                 default_le_ubrmse,pso_le_ubrmse,perc_change_le_ubrmse,
-                diff_le_pso,change_le_ubrmse
+                diff_le_pso,change_le_ubrmse,change_le_ubrmse_norm
             ]
             avgs = [
                 avg_default_le_rmse,avg_pso_le_rmse,avg_pso_first_it_le_rmse,
@@ -944,7 +986,7 @@ class analyze_pix:
                 avg_pso_le_corr,avg_change_le_r2,avg_change_le_corr,
                 avg_default_le_rmse,avg_pso_le_ubrmse,
                 avg_perc_change_le_ubrmse,avg_diff_le_pso,
-                avg_change_le_ubrmse
+                avg_change_le_ubrmse,avg_change_le_ubrmse_norm
             ]
             names = [
                 'default_le_rmse','pso_le_rmse','pso_first_it_le_rmse',
@@ -952,33 +994,43 @@ class analyze_pix:
                 'diff_le_default','default_le_r2','default_le_corr',
                 'pso_le_r2','pso_le_corr','change_le_r2','change_le_corr',
                 'default_le_ubrmse','pso_le_ubrmse',
-                'perc_change_le_ubrmse','diff_le_pso','change_le_ubrmse'
+                'perc_change_le_ubrmse','diff_le_pso','change_le_ubrmse',
+                'change_le_ubrmse_norm'
             ]
             types = [
                 'le_rmse','le_rmse','le_rmse','le_perc_change','le_perc_change',
                 'le_diff','le_perc_change','le_perc_change','le_perc_change',
                 'le_perc_change','le_perc_change','le_perc_change',
-                'le_rmse','le_rmse','le_perc_change','le_diff','le_rmse'
+                'le_rmse','le_rmse','le_perc_change','le_diff','diff_le_rmse',
+                'diff_le_rmse_norm'
             ]
             cmaps = {
-                'le_rmse':'winter',
+                'le_rmse':'rainbow',
                 'le_perc_change':'bwr',
                 'le_diff':'bwr',
+                'diff_le_rmse':'bwr',
+                'diff_le_rmse_norm':'bwr'
             }
             vmins = {
                 'le_rmse':0,
                 'le_perc_change':-1,
                 'le_diff':-40,
+                'diff_le_rmse':-20,
+                'diff_le_rmse_norm':-.5
             }
             vmaxs = {
                 'le_rmse':50,
                 'le_perc_change':1,
-                'le_diff':40
+                'le_diff':40,
+                'diff_le_rmse':20,
+                'diff_le_rmse_norm':.5
             }
             compare = {
                 'le_rmse':'fluxcom',
                 'le_perc_change':'fluxcom',
-                'le_diff':'fluxcom'
+                'le_diff':'fluxcom',
+                'diff_le_rmse':'fluxcom',
+                'diff_le_rmse_norm':'fluxcom'
             }
         if plot_trim:
             exps = [
@@ -1061,7 +1113,7 @@ class analyze_pix:
                 bbox=dict(facecolor='white')
             )
             # save
-            savename = '{name}_{exp}.png'.format(
+            savename = '{name}_{exp}_iterations.png'.format(
                 name=names[p],exp=exps[p]
             )
             savename = os.path.join(

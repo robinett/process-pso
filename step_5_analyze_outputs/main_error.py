@@ -47,11 +47,11 @@ def main():
     )
     # the directory for the first iteration of the PSO run
     first_iteration_experiment = (
-        '/shared/pso_outputs/g1_a0_a1_et_strm_camels_spin19921994_test19952014_v2/num_1/1'
+        '/shared/pso_outputs/g1_a0_a1_et_strm_camels_spin19921994_test19952014_v2/num_3/1'
     )
     # the directory for the final iteration of the PSO run
     final_iteration_experiment = (
-        '/shared/pso_outputs/g1_a0_a1_et_strm_camels_spin19921994_test19952014/num_7/4'
+        '/shared/pso_outputs/g1_a0_a1_et_strm_camels_spin19921994_test19952014_v2/num_8/1'
     )
     # set the start date and end date for our period of interest
     # start date and ned date are inclusive
@@ -69,7 +69,7 @@ def main():
     # what are the experiment names to use
     exp_names = [
         'med-default-pft-g1-1992-2014',
-        'g1-a0-a1-et-strm-spin19921994-test19952014-v2-first',
+        'g1-a0-a1-et-strm-spin19921994-test19952014-v2-num3',
         'g1-a0-a1-et-strm-spin19921994-test19952014-v2-num8'
     ]
     # location of the all_info.pkl file containing pso information
@@ -87,7 +87,7 @@ def main():
     # PSO optimization)?
     is_default_experiment = [True,False,False]
     # do these experiments have met forcing data associated with them?
-    read_met_forcing = [False,False,False]
+    read_met_forcing = [True,False,False]
     # if raw model outputs have already been processed, 
     # should processed data be loaded instead?
     load_bools =  [True,True,True]
@@ -105,9 +105,9 @@ def main():
         final_iteration_experiment_compare
     ]
     exp_names_compare = [
-        'med-default-pft-g1-1992-2014',
-        'g1-ai-et-strm-spin19921994-test19952014-first',
-        'g1-ai-et-strm-spin19921994-test19952014-num8'
+        'g1-a0-a1-et-strm-spin19921994-test19952014-v2-first',
+        'g1-ai-et-strm-spin19921994-test19952014-v2-first',
+        'g1-a0-a1-et-strm-spin19921994-test19952014-v2-num4',
     ]
     save_bools_compare = [False,False,False]
     load_bools_compare = [True,True,True]
@@ -115,8 +115,12 @@ def main():
     read_met_forcing_compare = [False,False,False]
     # what is the all info for this comparison experiment?
     comparison_all_info_fname = (
-        '/shared/pso_outputs/g1_ai_et_strm_camels_spin19921994_test19952014/all_info.pkl'
+        '/shared2/pso_outputs/g1_ai_et_strm_camels_spin19921994_test19952014_v2/all_info.pkl'
     )
+    # where should we save the default le error?
+    default_le_err_fname = 'default_catchcn45_le_ubrmse.csv'
+    # where should we save the default streamflow error?
+    default_strm_err_fname = 'default_catchcn45_strm_mae.csv'
     # is this a pso experiment? obviously, yes it is
     experiment_type = 'pso'
     # where is the fluxcom data located?
@@ -197,6 +201,10 @@ def main():
     geojson_fname = (
         '/shared/pso/step_1_choose_tiles/outputs/chosen_camels.geojson'
     )
+    # where do we have the info on the chosen huc6s?
+    chosen_huc6s_fname = (
+        '/shared/pso/step_1_choose_tiles/outputs/chosen_camels.csv'
+    )
     # where is the directory with shapefile with information on the US states?
     states_shp_fname = (
         '/shared/pso/step_1_choose_tiles/data/state_shp/'
@@ -230,17 +238,19 @@ def main():
     plot_pix_analysis = False
     plot_pix_timeseries = False
     run_watershed_analysis = True
+    plot_watershed_error_hist = False
     plot_watershed_analysis = False
     plot_watershed_timeseries = False
     # must run both pix analysis and watershed analysis for pso analysis to
     # work correctly
-    run_pso_analysis = True
+    run_pso_analysis = False
     plot_pso_scatter = False
     compare_multiple_experiments = False
     analyze_during_drought = False
     plot_spei = False
     # should the all the experiments be plotted?
-    skinny_plot = True
+    skinny_plot_le = False
+    skinny_plot_water = True
 
     # initiate an instance of the class
     t = get_timeseries(start,end)
@@ -275,20 +285,21 @@ def main():
         pft_info = a_pix.get_pft_info(raw_pft_dir,analyzed_pft_dir,pixels)
         # get the rmse dicts for pixel/daily scale
         print('getting rmse dicts for daily pixel scale')
+        print(read_met_forcing[0])
         default_df_pix,pso_df_pix,fluxcom_df = a_pix.get_rmse_dict(
             exp_names,catch_timeseries,fluxcom_timeseries,experiment_type,
-            start_error,end_error
+            start_error,end_error,out_dir,default_le_err_fname
         )
+        if plot_pix_timeseries:
+            a_pix.plot_le_timeseries(
+                exp_names,catch_timeseries,fluxcom_timeseries,plots_dir
+            )
         if plot_pix_analysis:
             # plot LE timeseries and their changes
-            if plot_pix_timeseries:
-                a_pix.plot_le_timeseries(
-                    exp_names,catch_timeseries,fluxcom_timeseries,plots_dir
-                )
             # plot map of rmse and changes for pixel/daily scale
             #print('plotting maps of rmse and average changes at pixel scale')
             a_pix.plot_pso_maps(
-                exp_names,default_df_pix,pso_df_pix,plots_dir,skinny_plot
+                exp_names,default_df_pix,pso_df_pix,plots_dir,skinny_plot_le
             )
             # plot error and average LE as it progresses through PSO
             # do this for pixel/daily scale
@@ -300,11 +311,11 @@ def main():
         # let's just plot some general comparisons
         default_df_general = a_pix.get_rmse_dict(
             exp_names[0],catch_timeseries[exp_names[0]],fluxcom_timeseries,
-            'general',start_error,end_error
+            'general',start_error,end_error,out_dir,default_le_err_fname
         )
         pso_df_general = a_pix.get_rmse_dict(
             exp_names[2],catch_timeseries[exp_names[2]],fluxcom_timeseries,
-            'general',start_error,end_error
+            'general',start_error,end_error,out_dir,'none'
         )
         if plot_pix_analysis:
             a_pix.plot_general_comparison_maps(
@@ -323,7 +334,8 @@ def main():
         print('getting watershed scale model outputs')
         wat_scale_outs = a_water.get_model_preds_watershed(
             start,end,exp_names,catch_timeseries,streamflow_timeseries,
-            fluxcom_timeseries,intersection_info,start_error,end_error
+            fluxcom_timeseries,intersection_info,start_error,end_error,
+            read_met_forcing[0]
         )
         print('plotting streamflow timeseries')
         #if plot_watershed_timeseries:
@@ -333,7 +345,8 @@ def main():
         returned_rmse_dfs = a_water.get_rmse_dict(
             wat_scale_outs,lai_map_fname,intersection_info,all_tiles,
             start_error,end_error,plot_watershed_timeseries,exp_names,
-            plots_dir
+            plots_dir,plot_watershed_error_hist,read_met_forcing[0],
+            out_dir,default_strm_err_fname
         )
         # extract the different rmse dfs that were returned
         # information for the return rmse list:
@@ -348,7 +361,8 @@ def main():
         #)
         a_water.plot_maps(
             returned_rmse_dfs,plots_dir,geojson_fname,exp_names,
-            states_shp_fname,plot_watershed_analysis,skinny_plot
+            states_shp_fname,plot_watershed_analysis,skinny_plot_water,
+            read_met_forcing[0],chosen_huc6s_fname
         )
     if run_pso_analysis:
         if not run_pix_analysis or not run_watershed_analysis:
@@ -404,7 +418,7 @@ def main():
         print('getting rmse dicts for daily pixel scale')
         default_df_pix_compare,pso_df_pix_compare,fluxcom_df_compare = a_pix.get_rmse_dict(
             exp_names_compare,catch_timeseries_compare,fluxcom_timeseries,
-            experiment_type,start_error,end_error
+            experiment_type,start_error,end_error,out_dir,'none'
         )
         a_water = analyze_watershed()
         # get the intersection info so that we know which pixels correspond to
@@ -422,11 +436,12 @@ def main():
         returned_rmse_dfs_compare = a_water.get_rmse_dict(
             wat_scale_outs_compare,lai_map_fname,intersection_info,all_tiles,
             start_error,end_error,plot_watershed_timeseries,
-            exp_names,plots_dir
+            exp_names,plots_dir,plot_watershed_error_hist,False,
+            out_dir,'none'
         )
         a_water.plot_maps(
             returned_rmse_dfs_compare,plots_dir,geojson_fname,exp_names_compare,
-            states_shp_fname,False,skinny_plot
+            states_shp_fname,False,skinny_plot_water,False
         )
         comp = compare_experiments()
         # compare what objective functions you get for four different
@@ -443,7 +458,7 @@ def main():
         comp.plot_diff(
             exp_names,exp_names_compare,pso_df_pix,pso_df_pix_compare,
             returned_rmse_dfs[2],returned_rmse_dfs_compare[2],
-            geojson_fname,states_shp_fname,plots_dir,skinny_plot
+            geojson_fname,states_shp_fname,plots_dir,skinny_plot_water
         )
     if analyze_during_drought:
         d = drought()
