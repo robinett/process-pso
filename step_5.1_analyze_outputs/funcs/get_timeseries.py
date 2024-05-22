@@ -10,6 +10,44 @@ import pickle as pkl
 import copy
 
 class get_timeseries:
+    def get_all_timeseries_info(self,timeseries_info,start,end,
+                                pixels_fname,intersection_info_fname):
+        to_load = list(timeseries_info.keys())
+        for l,load in enumerate(to_load):
+            # get the raw timeseries at the pixel scales
+            this_pixel_raw_timeseries = self.get_catchcn(
+                timeseries_info[load]['dir'],
+                timeseries_info[load]['load_or_save'],
+                timeseries_info[load]['default_type'],
+                timeseries_info[load]['read_met_forcing'],
+                timeseries_info[load]['timeseries_dir'],
+                start,
+                end,
+                pixels_fname
+            )
+            timeseries_info[load]['pixel_raw_timeseries'] = this_pixel_raw_timeseries
+            # get the raw timeseries at the watershed scale
+            this_wat_raw_timeseries = self.get_watershed(
+                timeseries_info[load]['pixel_raw_timeseries'],
+                timeseries_info[load]['read_met_forcing'],
+                intersection_info_fname
+            )
+            timeseries_info[load]['wat_raw_timeseries'] = this_wat_raw_timeseries
+            # get all info for this timeseries
+            if timeseries_info[load]['default_type'] == 'pso_output':
+                this_all_info_fname = os.path.join(
+                    timeseries_info[load]['dir'],
+                    '../',
+                    '../',
+                    'all_info.pkl'
+                )
+                this_opt_type = timeseries_info[load]['optimization_type']
+                this_positions,this_obj = self.get_all_info(
+                    this_all_info_fname,this_opt_type
+                )
+                timeseries_info[load]['obj_vals'] = this_obj
+                timeseries_info[load]['positions'] = this_positions
+        return timeseries_info
     def get_catchcn(self,fname,load_or_save,default_type,read_met_forcing,
                     timeseries_dir,start,end,
                     pixels_fname,print_vars=False):
@@ -589,7 +627,60 @@ class get_timeseries:
         obs = obs.set_index('time')
         obs.columns = obs.columns.map(int)
         return obs
-
+    def get_all_info(self,all_info_fname,optimization_type):
+        with open(all_info_fname,'rb') as f:
+            all_info = pkl.load(f)
+        keys = list(all_info.keys())
+        num_iterations = len(keys)
+        if optimization_type == 'pft':
+            param_names = [
+                'a0_needleaf_trees',
+                'a0_broadleaf_trees',
+                'a0_shrub',
+                'a0_c3_grass',
+                'a0_c4_grass',
+                'a0_crop'
+            ]
+        elif optimization_type == 'ef':
+            param_names = [
+                'b_needleleaf_trees',
+                'b_broadleaf_tress',
+                'b_shrub',
+                'b_c3_grass',
+                'b_c4_grass',
+                'b_crop',
+                'a0_intercept',
+                'a1_precip_coef',
+                'a2_canopy_coef'
+            ]
+        else:
+            raise Exception(
+                'optimization type must be \'ef\' or \'pft\''
+            )
+        example_pos = all_info[keys[0]]['positions']
+        num_particles,nan = np.shape(example_pos)
+        obj_vals = np.zeros((num_iterations,num_particles))
+        obj_strm_vals = np.zeros((num_iterations,num_particles))
+        obj_et_vals = np.zeros((num_iterations,num_particles))
+        positions = {}
+        objective = {}
+        for p,param in enumerate(param_names):
+            this_param = np.zeros((num_iterations,num_particles))
+            for i,it in enumerate(keys):
+                this_pos = all_info[it]['positions']
+                this_param[i,:] = this_pos[:,p]
+                if p == 0:
+                    this_obj = all_info[it]['obj_out_norm']
+                    obj_vals[i,:] = this_obj
+                    this_obj_strm = all_info[it]['strm_obj_out_norm']
+                    obj_strm_vals[i,:] = this_obj_strm
+                    this_obj_et = all_info[it]['et_obj_out_norm']
+                    obj_et_vals[i,:] = this_obj_et
+            positions[param] = this_param
+        objective['all'] = obj_vals
+        objective['strm'] = obj_strm_vals
+        objective['et'] = obj_et_vals
+        return [positions,objective]
 
 
 

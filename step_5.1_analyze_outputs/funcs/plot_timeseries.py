@@ -7,7 +7,8 @@ class timeseries:
     def plot_one_var(self,dfs,names,var,units,name,plots_dir,
                      locations=[np.nan],
                      start='all',end='all',
-                     small_preds=[np.nan],obs_idx=np.nan):
+                     small_preds=[np.nan],obs_idx=np.nan,
+                     colors = [0]):
         '''
         Function that plots timeseries
         Inputs:
@@ -31,7 +32,10 @@ class timeseries:
             small_preds = np.repeat(
                 1,len(dfs)
             )
-        colors = plt.cm.get_cmap('rainbow',len(dfs))
+        colors_given = True
+        if colors[0] == 0:
+            colors = plt.cm.get_cmap('rainbow',len(dfs))
+            colors_given = False
         for l,loc in enumerate(locations):
             print(
                 'plotting watershed timeseries for {} at watershed {}'.format(
@@ -42,6 +46,8 @@ class timeseries:
             for d,df in enumerate(dfs):
                 if np.isnan(obs_idx) == False and obs_idx == d:
                     this_color = 'k'
+                elif colors_given == True:
+                    this_color = colors[d]
                 else:
                     this_color = colors(d)
                 this_var = df[var][loc]

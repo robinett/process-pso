@@ -112,7 +112,8 @@ class plot_other:
         )
         plt.close(fig)
     def scatter(self,x,y,plots_dir,save_name,x_label,y_label,
-                best_fit_line=False,dot_size=1,one_to_one_line=False):
+                best_fit_line=False,dot_size=1,one_to_one_line=False,
+                xlim=[np.nan],ylim=[np.nan]):
         # can't do best fit or one to one line if all nan
         x_nan_idx = np.where(np.isnan(x) == True)[0]
         num_x_nan = len(x_nan_idx)
@@ -171,6 +172,10 @@ class plot_other:
             vals = np.arange(min_all,max_all,step)
             plt.plot(vals,vals,label = 'one_to_one_line')
             plt.legend()
+        if np.isnan(xlim[0]) == False:
+            plt.xlim(xlim[0],xlim[1])
+        if np.isnan(ylim[0]) == False:
+            plt.ylim(ylim[0],ylim[1])
         plt.savefig(
             os.path.join(
                 plots_dir,
@@ -178,7 +183,20 @@ class plot_other:
             )
         )
         plt.close()
-
+    def iteration_plot(self,vals,vals_name,plots_dir,save_name):
+        # each row is a line
+        # each column is a point on that line
+        x = np.arange(len(vals)) + 1
+        plt.plot(x,vals)
+        plt.xlabel('iteration number')
+        plt.ylabel(vals_name)
+        plt.savefig(
+            os.path.join(
+                plots_dir,
+                save_name
+            )
+        )
+        plt.close()
 
 
 

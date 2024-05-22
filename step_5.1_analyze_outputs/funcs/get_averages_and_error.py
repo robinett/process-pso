@@ -10,6 +10,32 @@ from plot_other import plot_other
 class averages_and_error:
     def __init__(self):
         warnings.filterwarnings('ignore')
+    def get_all_averages_and_error(self,timeseries_info,le_obs,strm_obs,
+                                   start_err,end_err):
+        to_load = list(timeseries_info.keys())
+        for l,load in enumerate(to_load):
+            # get the pixel-averaged and error information for pixel-scale outputs
+            pixel_avgs = self.var_avgs(
+                timeseries_info[load]['pixel_raw_timeseries']
+            )
+            timeseries_info[load]['pixel_avgs'] = pixel_avgs
+            # get the watershed-averaged and error information for watershed-scale
+            # ouptts
+            wat_avgs = self.var_avgs(
+                timeseries_info[load]['wat_raw_timeseries']
+            )
+            timeseries_info[load]['wat_avgs'] = wat_avgs
+            this_le_err_df = self.var_error(
+                timeseries_info[load]['pixel_raw_timeseries']['le'],
+                le_obs,start_err,end_err
+            )
+            timeseries_info[load]['pixel_le_errors'] = this_le_err_df
+            this_wat_err_df = self.var_error(
+                timeseries_info[load]['wat_raw_timeseries']['strm_yr'],
+                strm_obs,start_err,end_err
+            )
+            timeseries_info[load]['wat_strm_errors'] = this_wat_err_df
+        return timeseries_info
     def var_avgs(self,raw_timeseries):
         '''
         Function that computes the average for each variable passed in the
