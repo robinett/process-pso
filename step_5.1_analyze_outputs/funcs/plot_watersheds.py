@@ -89,7 +89,7 @@ class plot_wat:
         )
         this_savename = os.path.join(
             plots_dir,
-            '{name}_map.png'.format(
+            '{name}_map.pdf'.format(
                 name=name
             )
         )

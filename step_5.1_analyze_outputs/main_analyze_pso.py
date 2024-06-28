@@ -144,176 +144,197 @@ def main():
     ##########################################
     #  The section where we plot timeseries  #
     ##########################################
-    p_t = timeseries()
-    # le timeseries for PFT
-    to_plot = [
-        timeseries_info[to_load[0]]['pixel_raw_timeseries'],
-        timeseries_info[to_load[1]]['pixel_raw_timeseries'],
-        timeseries_info[to_load[2]]['pixel_raw_timeseries'],
-        {'le':le_obs}
-    ]
-    names = [
-        'default',
-        'iteration 1',
-        'iteration 5',
-        'GLEAM'
-    ]
-    sizes = np.repeat(0.5,len(names))
-    colors = ['r','y','g','k']
-    start_plot = datetime.date(2010,1,1)
-    end_plot = datetime.date(2011,12,31)
-    p_t.plot_one_var(
-        to_plot,names,'le','W/m2','timeseries_pft_mae_it1_it5',
-        plots_dir,start=start_plot,end=end_plot,
-        small_preds=sizes,colors=colors
-    )
-    # streamflow timeseries for PFT
-    to_plot = [
-        timeseries_info[to_load[0]]['wat_raw_timeseries'],
-        timeseries_info[to_load[1]]['wat_raw_timeseries'],
-        timeseries_info[to_load[2]]['wat_raw_timeseries'],
-        {'strm_yr':strm_obs}
-    ]
-    names = [
-        'default',
-        'iteration 1',
-        'iteration 5',
-        'CAMELS'
-    ]
-    sizes = np.repeat(0.5,len(names))
-    p_t.plot_one_var(
-        to_plot,names,'strm_yr','mm/day','timeseries_pft_mae_it1_it5',
-        plots_dir,start=start,end=end,
-        small_preds=sizes,colors=colors
-    )
-    # le timeseries for EF
-    to_plot = [
-        timeseries_info[to_load[0]]['pixel_raw_timeseries'],
-        timeseries_info[to_load[3]]['pixel_raw_timeseries'],
-        timeseries_info[to_load[4]]['pixel_raw_timeseries'],
-        {'le':le_obs}
-    ]
-    names = [
-        'default',
-        'iteration 1',
-        'iteration 6',
-        'GLEAM'
-    ]
-    sizes = np.repeat(0.5,len(names))
-    start_plot = datetime.date(2010,1,1)
-    end_plot = datetime.date(2011,12,31)
-    p_t.plot_one_var(
-        to_plot,names,'le','W/m2','timeseries_ef_mae_it1_it6',
-        plots_dir,start=start_plot,end=end_plot,
-        small_preds=sizes,colors=colors
-    )
-    # streamflow timeseries for EF
-    to_plot = [
-        timeseries_info[to_load[0]]['wat_raw_timeseries'],
-        timeseries_info[to_load[3]]['wat_raw_timeseries'],
-        timeseries_info[to_load[4]]['wat_raw_timeseries'],
-        {'strm_yr':strm_obs}
-    ]
-    names = [
-        'default',
-        'iteration 1',
-        'iteration 6',
-        'CAMELS'
-    ]
-    sizes = np.repeat(0.5,len(names))
-    p_t.plot_one_var(
-        to_plot,names,'strm_yr','mm/day','timeseries_ef_mae_it1_it6',
-        plots_dir,start=start,end=end,
-        small_preds=sizes,colors=colors
-    )
-    # lets plot pft, ef, and obs on the same timeseries
-    # for le
-    to_plot = [
-        timeseries_info[to_load[2]]['pixel_raw_timeseries'],
-        timeseries_info[to_load[4]]['pixel_raw_timeseries'],
-        {'le':le_obs}
-    ]
-    names = [
-        'PFT itertaion 5',
-        'EF iteration 6',
-        'GLEAM'
-    ]
-    sizes = np.repeat(0.5,len(names))
-    colors = ['r','g','k']
-    start_plot = datetime.date(2010,1,1)
-    end_plot = datetime.date(2011,12,31)
-    p_t.plot_one_var(
-        to_plot,names,'le','W/m2','timeseries_ef_and_pft',
-        plots_dir,start=start_plot,end=end_plot,
-        small_preds=sizes,colors=colors
-    )
-    # for strm
-    to_plot = [
-        timeseries_info[to_load[2]]['wat_raw_timeseries'],
-        timeseries_info[to_load[4]]['wat_raw_timeseries'],
-        {'strm_yr':strm_obs}
-    ]
-    names = [
-        'PFT iteration 5',
-        'EF iteration 6',
-        'CAMELS'
-    ]
-    sizes = np.repeat(0.5,len(names))
-    p_t.plot_one_var(
-        to_plot,names,'strm_yr','mm/day','timeseries_ef_and_pft',
-        plots_dir,start=start,end=end,
-        small_preds=sizes,colors=colors
-    )
+    #p_t = timeseries()
+    ## le timeseries for PFT
+    #to_plot = [
+    #    timeseries_info[to_load[0]]['pixel_raw_timeseries'],
+    #    timeseries_info[to_load[1]]['pixel_raw_timeseries'],
+    #    timeseries_info[to_load[2]]['pixel_raw_timeseries'],
+    #    {'le':le_obs}
+    #]
+    #names = [
+    #    'default',
+    #    'iteration 1',
+    #    'iteration 5',
+    #    'GLEAM'
+    #]
+    #sizes = np.repeat(0.5,len(names))
+    #colors = ['r','y','g','k']
+    #start_plot = datetime.date(2010,1,1)
+    #end_plot = datetime.date(2011,12,31)
+    #p_t.plot_one_var(
+    #    to_plot,names,'le','W/m2','timeseries_pft_mae_it1_it5',
+    #    plots_dir,start=start_plot,end=end_plot,
+    #    small_preds=sizes,colors=colors
+    #)
+    ## streamflow timeseries for PFT
+    #to_plot = [
+    #    timeseries_info[to_load[0]]['wat_raw_timeseries'],
+    #    timeseries_info[to_load[1]]['wat_raw_timeseries'],
+    #    timeseries_info[to_load[2]]['wat_raw_timeseries'],
+    #    {'strm_yr':strm_obs}
+    #]
+    #names = [
+    #    'default',
+    #    'iteration 1',
+    #    'iteration 5',
+    #    'CAMELS'
+    #]
+    #sizes = np.repeat(0.5,len(names))
+    #p_t.plot_one_var(
+    #    to_plot,names,'strm_yr','mm/day','timeseries_pft_mae_it1_it5',
+    #    plots_dir,start=start,end=end,
+    #    small_preds=sizes,colors=colors
+    #)
+    ## le timeseries for EF
+    #to_plot = [
+    #    timeseries_info[to_load[0]]['pixel_raw_timeseries'],
+    #    timeseries_info[to_load[3]]['pixel_raw_timeseries'],
+    #    timeseries_info[to_load[4]]['pixel_raw_timeseries'],
+    #    {'le':le_obs}
+    #]
+    #names = [
+    #    'default',
+    #    'iteration 1',
+    #    'iteration 6',
+    #    'GLEAM'
+    #]
+    #sizes = np.repeat(0.5,len(names))
+    #start_plot = datetime.date(2010,1,1)
+    #end_plot = datetime.date(2011,12,31)
+    #p_t.plot_one_var(
+    #    to_plot,names,'le','W/m2','timeseries_ef_mae_it1_it6',
+    #    plots_dir,start=start_plot,end=end_plot,
+    #    small_preds=sizes,colors=colors
+    #)
+    ## streamflow timeseries for EF
+    #to_plot = [
+    #    timeseries_info[to_load[0]]['wat_raw_timeseries'],
+    #    timeseries_info[to_load[3]]['wat_raw_timeseries'],
+    #    timeseries_info[to_load[4]]['wat_raw_timeseries'],
+    #    {'strm_yr':strm_obs}
+    #]
+    #names = [
+    #    'default',
+    #    'iteration 1',
+    #    'iteration 6',
+    #    'CAMELS'
+    #]
+    #sizes = np.repeat(0.5,len(names))
+    #p_t.plot_one_var(
+    #    to_plot,names,'strm_yr','mm/day','timeseries_ef_mae_it1_it6',
+    #    plots_dir,start=start,end=end,
+    #    small_preds=sizes,colors=colors
+    #)
+    ## lets plot pft, ef, and obs on the same timeseries
+    ## for le
+    #to_plot = [
+    #    timeseries_info[to_load[2]]['pixel_raw_timeseries'],
+    #    timeseries_info[to_load[4]]['pixel_raw_timeseries'],
+    #    {'le':le_obs}
+    #]
+    #names = [
+    #    'PFT itertaion 5',
+    #    'EF iteration 6',
+    #    'GLEAM'
+    #]
+    #sizes = np.repeat(0.5,len(names))
+    #colors = ['r','g','k']
+    #start_plot = datetime.date(2010,1,1)
+    #end_plot = datetime.date(2011,12,31)
+    #p_t.plot_one_var(
+    #    to_plot,names,'le','W/m2','timeseries_ef_and_pft',
+    #    plots_dir,start=start_plot,end=end_plot,
+    #    small_preds=sizes,colors=colors
+    #)
+    ## for strm
+    #to_plot = [
+    #    timeseries_info[to_load[2]]['wat_raw_timeseries'],
+    #    timeseries_info[to_load[4]]['wat_raw_timeseries'],
+    #    {'strm_yr':strm_obs}
+    #]
+    #names = [
+    #    'PFT iteration 5',
+    #    'EF iteration 6',
+    #    'CAMELS'
+    #]
+    #sizes = np.repeat(0.5,len(names))
+    #p_t.plot_one_var(
+    #    to_plot,names,'strm_yr','mm/day','timeseries_ef_and_pft',
+    #    plots_dir,start=start,end=end,
+    #    small_preds=sizes,colors=colors
+    #)
 
     ##############################################
     #  The section where we plot watershed maps  #
     ##############################################
     # initiate the class
-    p_w = plot_wat()
+    #p_w = plot_wat()
     # get the average stream obs, which we will need for a ton of these
     # calculations
     avg_strm = strm_obs.mean()
-    # get the hucs, which we will need to specify in all maps
-    hucs = list(strm_obs.index)
-    hucs = [
-        int(h) for h in hucs
-    ]
-    # let's plot the change in J value from iteration 1 to 5 for streamflow for
-    # PFT
+    ## get the hucs, which we will need to specify in all maps
+    #hucs = list(strm_obs.columns)
+    #hucs = [
+    #    int(h) for h in hucs
+    #]
+    ## let's plot the change in J value from iteration 1 to 5 for streamflow for
+    ## PFT
     j_strm_1_pft = (
-        timeseries_info[to_load[1]]['wat_strm_errors'].loc['mae']/
+        timeseries_info[exps[1]]['wat_strm_errors'].loc['mae']/
         avg_strm
     )
     j_strm_5_pft = (
-        timeseries_info[to_load[2]]['wat_strm_errors'].loc['mae']/
+        timeseries_info[exps[2]]['wat_strm_errors'].loc['mae']/
         avg_strm
     )
     change_j_strm_pft = j_strm_5_pft - j_strm_1_pft
     change_j_strm_pft = np.array(change_j_strm_pft)
     avg_change_j_strm_pft = np.mean(change_j_strm_pft)
-    p_w.plot_map(
-        'change_j_strm_pft',hucs,change_j_strm_pft,
-        avg_change_j_strm_pft,plots_dir,vmin=-0.45,vmax=0.45,
-        cmap='bwr'
-    )
+    #p_w.plot_map(
+    #    'change_j_strm_pft',hucs,change_j_strm_pft,
+    #    avg_change_j_strm_pft,plots_dir,vmin=-0.45,vmax=0.45,
+    #    cmap='bwr'
+    #)
     # let's plot the change in J value from iteration 1 to 5 for streamflow for
     # EF
     j_strm_1_ef = (
-        timeseries_info[to_load[3]]['wat_strm_errors'].loc['mae']/
+        timeseries_info[exps[3]]['wat_strm_errors'].loc['mae']/
         avg_strm
     )
     j_strm_6_ef = (
-        timeseries_info[to_load[4]]['wat_strm_errors'].loc['mae']/
+        timeseries_info[exps[4]]['wat_strm_errors'].loc['mae']/
         avg_strm
     )
     change_j_strm_ef = j_strm_6_ef - j_strm_1_ef
     change_j_strm_ef = np.array(change_j_strm_ef)
     avg_change_j_strm_ef = np.mean(change_j_strm_ef)
-    p_w.plot_map(
-        'change_j_strm_ef',hucs,change_j_strm_ef,
-        avg_change_j_strm_ef,plots_dir,vmin=-0.25,vmax=0.25,
-        cmap='bwr'
-    )
+    #p_w.plot_map(
+    #    'change_j_strm_ef',hucs,change_j_strm_ef,
+    #    avg_change_j_strm_ef,plots_dir,vmin=-0.25,vmax=0.25,
+    #    cmap='bwr'
+    #)
+    # let's plot the difference in objective values between PFT and EF
+    # optimizations
+    diff_j_strm_ef_pft = j_strm_6_ef - j_strm_5_pft
+    diff_j_strm_ef_pft = np.array(diff_j_strm_ef_pft)
+    avg_diff_j_strm_ef_pft = np.nanmean(diff_j_strm_ef_pft)
+    print(np.nanmin(diff_j_strm_ef_pft))
+    print(np.nanmax(diff_j_strm_ef_pft))
+    print(avg_diff_j_strm_ef_pft)
+    #p_w.plot_map(
+    #    'diff_j_strm_ef_pft',hucs,diff_j_strm_ef_pft,
+    #    avg_diff_j_strm_ef_pft,plots_dir,vmin=-.7,vmax=.7,
+    #    cmap='bwr'
+    #)
+    ## let's plot the % change compared to PFT at each pixel
+    #perc_diff_j_strm_ef_pft = diff_j_strm_ef_pft/j_strm_5_pft
+    #perc_diff_j_strm_ef_pft = np.array(perc_diff_j_strm_ef_pft)
+    #avg_perc_diff_j_strm_ef_pft = np.nanmean(perc_diff_j_strm_ef_pft)
+    #p_w.plot_map(
+    #    'perc_diff_j_strm_ef_pft',hucs,perc_diff_j_strm_ef_pft,
+    #    avg_perc_diff_j_strm_ef_pft,plots_dir,
+    #    cmap='bwr')
 
     ##########################################
     #  The section where we plot pixel maps  #
@@ -327,131 +348,135 @@ def main():
     # let's plot the change in J value from iteration 1 to 5 for streamflow for
     # PFT
     j_et_1_pft = (
-        timeseries_info[to_load[1]]['wat_strm_errors'].loc['mae']/
+        timeseries_info[exps[1]]['pixel_le_errors'].loc['mae']/
         avg_et
     )
     j_et_5_pft = (
-        timeseries_info[to_load[2]]['wat_strm_errors'].loc['mae']/
+        timeseries_info[exps[2]]['pixel_le_errors'].loc['mae']/
         avg_et
     )
     change_j_et_pft = j_et_5_pft - j_et_1_pft
     change_j_et_pft = np.array(change_j_et_pft)
     avg_change_j_et_pft = np.mean(change_j_et_pft)
-    p_p.plot_map(
-        'change_j_et_pft',pixels,change_j_et_pft,
-        avg_change_j_et_pft,plots_dir,vmin=-0.08,vmax=0.08,
-        cmap='bwr'
-    )
+    #p_p.plot_map(
+    #    'change_j_et_pft',pixels,change_j_et_pft,
+    #    avg_change_j_et_pft,plots_dir,vmin=-0.08,vmax=0.08,
+    #    cmap='bwr'
+    #)
     # let's plot the change in J value from iteration 1 to 5 for streamflow for
     # EF
     j_et_1_ef = (
-        timeseries_info[to_load[3]]['pixel_le_errors'].loc['mae']/
+        timeseries_info[exps[3]]['pixel_le_errors'].loc['mae']/
         avg_et
     )
     j_et_6_ef = (
-        timeseries_info[to_load[4]]['pixel_le_errors'].loc['mae']/
+        timeseries_info[exps[4]]['pixel_le_errors'].loc['mae']/
         avg_et
     )
     change_j_et_ef = j_et_6_ef - j_et_1_ef
     change_j_et_ef = np.array(change_j_et_ef)
     avg_change_j_et_ef = np.mean(change_j_et_ef)
+    #p_p.plot_map(
+    #    'change_j_et_ef',pixels,change_j_et_ef,
+    #    avg_change_j_et_ef,plots_dir,vmin=-0.12,vmax=0.12,
+    #    cmap='bwr'
+    #)
+    # let's plot the difference in objective values between PFT and EF
+    # optimizations
+    diff_j_et_ef_pft = j_et_6_ef - j_et_5_pft
+    diff_j_et_ef_pft = np.array(diff_j_et_ef_pft)
+    avg_diff_j_et_ef_pft = np.nanmean(diff_j_et_ef_pft)
+    #p_p.plot_map(
+    #    'diff_j_et_ef_pft',pixels,diff_j_et_ef_pft,
+    #    avg_diff_j_et_ef_pft,plots_dir,vmin=-.18,vmax=.18,
+    #    cmap='bwr'
+    #)
+    # let's plot the % difference in objective values between PFT and EF
+    perc_diff_j_et_ef_pft = diff_j_et_ef_pft/j_et_5_pft
+    perc_diff_j_et_ef_pft = np.array(perc_diff_j_et_ef_pft)
+    print(np.nanmax(perc_diff_j_et_ef_pft))
+    print(np.nanmin(perc_diff_j_et_ef_pft))
+    avg_perc_diff_j_et_ef_pft = np.nanmean(perc_diff_j_et_ef_pft)
+    print(avg_perc_diff_j_et_ef_pft)
     p_p.plot_map(
-        'change_j_et_ef',pixels,change_j_et_ef,
-        avg_change_j_et_ef,plots_dir,vmin=-0.12,vmax=0.12,
+        'perc_diff_j_et_ef_pft',pixels,perc_diff_j_et_ef_pft,
+        avg_perc_diff_j_et_ef_pft,plots_dir,
         cmap='bwr'
     )
 
     #######################################################
     #  The section where we plot movements per iteration  #
     #######################################################
-    p_o = plot_other()
-    pft_obj = timeseries_info[to_load[2]]['obj_vals']['all']
-    pft_obj_strm = timeseries_info[to_load[2]]['obj_vals']['strm']
-    pft_obj_et = timeseries_info[to_load[2]]['obj_vals']['et']
-    p_o.iteration_plot(
-        pft_obj,'objective value',plots_dir,
-        'pft_obj_val_iteration.png'
-    )
-    p_o.iteration_plot(
-        pft_obj_strm,'strm objective value',plots_dir,
-        'pft_strm_obj_val_iteration.png'
-    )
-    p_o.iteration_plot(
-        pft_obj_et,'objective value',plots_dir,
-        'pft_et_obj_val_iteration.png'
-    )
-    # make the plot of change in objective value for EF
-    ef_obj = timeseries_info[to_load[4]]['obj_vals']['all']
-    ef_obj_strm = timeseries_info[to_load[4]]['obj_vals']['strm']
-    ef_obj_et = timeseries_info[to_load[4]]['obj_vals']['et']
-    pft_a0_needleleaf = timeseries_info[to_load[2]]['positions']['a0_needleaf_trees']
-    pft_a0_crop = timeseries_info[to_load[2]]['positions']['a0_crop']
-    ef_a1 = timeseries_info[to_load[4]]['positions']['a1_precip_coef']
-    ef_a2 = timeseries_info[to_load[4]]['positions']['a2_canopy_coef']
-    p_o.iteration_plot(
-        ef_obj,'objective value',plots_dir,
-        'ef_obj_val_iteration.png'
-    )
-    p_o.iteration_plot(
-        ef_obj_strm,'strm objective value',plots_dir,
-        'ef_strm_obj_val_iteration.png'
-    )
-    p_o.iteration_plot(
-        ef_obj_et,'objective value',plots_dir,
-        'ef_et_obj_val_iteration.png'
-    )
-    p_o.iteration_plot(
-        pft_a0_needleleaf,'a0 needleleaf trees',plots_dir,
-        'pft_a0_needleleaf_iteration.png'
-    )
-    p_o.iteration_plot(
-        pft_a0_crop,'a0 crop',plots_dir,
-        'pft_a0_crop_iteration.png'
-    )
-    p_o.iteration_plot(
-        ef_a1,'a1 precip coef',plots_dir,
-        'ef_a1_iteration.png'
-    )
-    p_o.iteration_plot(
-        ef_a2,'a2 precip coef',plots_dir,
-        'ef_a2_iteration.png'
-    )
-    # let's plot the difference in objective values between PFT and EF
-    # optimizations
-    diff_j_et_ef_pft = j_et_6_ef - j_et_5_pft
-    diff_j_et_ef_pft = np.array(diff_j_et_ef_pft)
-    avg_diff_j_et_ef_pft = np.nanmean(diff_j_et_ef_pft)
-    p_p.plot_map(
-        'diff_j_et_ef_pft',pixels,diff_j_et_ef_pft,
-        avg_diff_j_et_ef_pft,plots_dir,vmin=-.18,vmax=.18,
-        cmap='bwr'
-    )
-    diff_j_strm_ef_pft = j_strm_6_ef - j_strm_5_pft
-    diff_j_strm_ef_pft = np.array(diff_j_strm_ef_pft)
-    avg_diff_j_strm_ef_pft = np.nanmean(diff_j_strm_ef_pft)
-    p_w.plot_map(
-        'diff_j_strm_ef_pft',hucs,diff_j_strm_ef_pft,
-        avg_diff_j_strm_ef_pft,plots_dir,vmin=-.7,vmax=.7,
-        cmap='bwr'
-    )
+    #p_o = plot_other()
+    #pft_obj = timeseries_info[to_load[2]]['obj_vals']['all']
+    #pft_obj_strm = timeseries_info[to_load[2]]['obj_vals']['strm']
+    #pft_obj_et = timeseries_info[to_load[2]]['obj_vals']['et']
+    #p_o.iteration_plot(
+    #    pft_obj,'objective value',plots_dir,
+    #    'pft_obj_val_iteration.png'
+    #)
+    #p_o.iteration_plot(
+    #    pft_obj_strm,'strm objective value',plots_dir,
+    #    'pft_strm_obj_val_iteration.png'
+    #)
+    #p_o.iteration_plot(
+    #    pft_obj_et,'objective value',plots_dir,
+    #    'pft_et_obj_val_iteration.png'
+    #)
+    ## make the plot of change in objective value for EF
+    #ef_obj = timeseries_info[to_load[4]]['obj_vals']['all']
+    #ef_obj_strm = timeseries_info[to_load[4]]['obj_vals']['strm']
+    #ef_obj_et = timeseries_info[to_load[4]]['obj_vals']['et']
+    #pft_a0_needleleaf = timeseries_info[to_load[2]]['positions']['a0_needleaf_trees']
+    #pft_a0_crop = timeseries_info[to_load[2]]['positions']['a0_crop']
+    #ef_a1 = timeseries_info[to_load[4]]['positions']['a1_precip_coef']
+    #ef_a2 = timeseries_info[to_load[4]]['positions']['a2_canopy_coef']
+    #p_o.iteration_plot(
+    #    ef_obj,'objective value',plots_dir,
+    #    'ef_obj_val_iteration.png'
+    #)
+    #p_o.iteration_plot(
+    #    ef_obj_strm,'strm objective value',plots_dir,
+    #    'ef_strm_obj_val_iteration.png'
+    #)
+    #p_o.iteration_plot(
+    #    ef_obj_et,'objective value',plots_dir,
+    #    'ef_et_obj_val_iteration.png'
+    #)
+    #p_o.iteration_plot(
+    #    pft_a0_needleleaf,'a0 needleleaf trees',plots_dir,
+    #    'pft_a0_needleleaf_iteration.png'
+    #)
+    #p_o.iteration_plot(
+    #    pft_a0_crop,'a0 crop',plots_dir,
+    #    'pft_a0_crop_iteration.png'
+    #)
+    #p_o.iteration_plot(
+    #    ef_a1,'a1 precip coef',plots_dir,
+    #    'ef_a1_iteration.png'
+    #)
+    #p_o.iteration_plot(
+    #    ef_a2,'a2 precip coef',plots_dir,
+    #    'ef_a2_iteration.png'
+    #)
 
     ##################################################################
-    #  Other random plots that we don't necessarily need every time  #
+    #  Checking the importance of small vs. large watersheds in PSO  #
     ##################################################################
-    # let's check how big the change in j_strm_pft is versus the size of the
-    # watershed
-    abs_change_j_strm_pft = np.abs(change_j_strm_pft)
-    p_o.scatter(
-        avg_strm,abs_change_j_strm_pft,plots_dir,'change_j_strm_pft_vs_avg_strm',
-        'average basin streamflow (mm/day)','change J strm PFT',
-        xlim=[-.5,10],ylim=[-.02,.37]
-    )
-    abs_change_j_strm_ef = np.abs(change_j_strm_ef)
-    p_o.scatter(
-        avg_strm,abs_change_j_strm_ef,plots_dir,'change_j_strm_ef_vs_avg_strm',
-        'average basin streamflow (mm/day)','change J strm EF',
-        xlim=[-.5,10],ylim=[-.02,.37]
-    )
+    ## let's check how big the change in j_strm_pft is versus the size of the
+    ## watershed
+    #abs_change_j_strm_pft = np.abs(change_j_strm_pft)
+    #p_o.scatter(
+    #    avg_strm,abs_change_j_strm_pft,plots_dir,'change_j_strm_pft_vs_avg_strm',
+    #    'average basin streamflow (mm/day)','change J strm PFT',
+    #    xlim=[-.5,10],ylim=[-.02,.37]
+    #)
+    #abs_change_j_strm_ef = np.abs(change_j_strm_ef)
+    #p_o.scatter(
+    #    avg_strm,abs_change_j_strm_ef,plots_dir,'change_j_strm_ef_vs_avg_strm',
+    #    'average basin streamflow (mm/day)','change J strm EF',
+    #    xlim=[-.5,10],ylim=[-.02,.37]
+    #)
 
 
 if __name__ == '__main__':

@@ -99,6 +99,8 @@ class averages_and_error:
         error_df.loc['mae'] = mae
         ubmae = self.ubmae(preds,obs)
         error_df.loc['ubmae'] = ubmae
+        bias = self.bias(preds,obs)
+        error_df.loc['bias'] = bias
         return error_df
     def rmse(self,preds,obs):
         diff = preds - obs
@@ -148,6 +150,10 @@ class averages_and_error:
         ubmae = diff.abs()
         ubmae = ubmae.mean(axis=0)
         return ubmae
+    def bias(self,preds,obs):
+        bias = preds - obs
+        bias = bias.mean(axis=0)
+        return bias
     def get_timestep_error(self,preds,obs,start,end):
         preds = preds.loc[start:end]
         obs = obs.loc[start:end]
@@ -211,19 +217,3 @@ class averages_and_error:
                 dot_size=0.5
             )
         return [add_bias,mult_bias]
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -11,7 +11,9 @@ import copy
 
 class get_timeseries:
     def get_all_timeseries_info(self,timeseries_info,start,end,
-                                pixels_fname,intersection_info_fname):
+                                pixels_fname,intersection_info_fname,
+                                precip_fname,canopy_fname,
+                                tile_info_fname):
         to_load = list(timeseries_info.keys())
         for l,load in enumerate(to_load):
             # get the raw timeseries at the pixel scales
@@ -47,6 +49,12 @@ class get_timeseries:
                 )
                 timeseries_info[load]['obj_vals'] = this_obj
                 timeseries_info[load]['positions'] = this_positions
+                it_num = timeseries_info[load]['iteration_number']
+                this_g1_map = self.get_g1_map(
+                    this_positions,this_obj,precip_fname,canopy_fname,
+                    tile_info_fname,this_opt_type,it_num
+                )
+                timeseries_info[load]['g1_map'] = this_g1_map
         return timeseries_info
     def get_catchcn(self,fname,load_or_save,default_type,read_met_forcing,
                     timeseries_dir,start,end,
@@ -644,7 +652,7 @@ class get_timeseries:
         elif optimization_type == 'ef':
             param_names = [
                 'b_needleleaf_trees',
-                'b_broadleaf_tress',
+                'b_broadleaf_trees',
                 'b_shrub',
                 'b_c3_grass',
                 'b_c4_grass',
@@ -681,8 +689,140 @@ class get_timeseries:
         objective['strm'] = obj_strm_vals
         objective['et'] = obj_et_vals
         return [positions,objective]
-
-
+    def get_g1_map(self,positions,objective,precip_fname,
+                   canopy_fname,tile_info_fname,
+                   optimization_type,it_num):
+        if optimization_type == 'pft':
+            positions_map = {
+                'Needleleaf evergreen temperate tree':'a0_needleaf_trees',
+                'Needleleaf evergreen boreal tree':'a0_needleaf_trees',
+                'Needleleaf deciduous boreal tree':'a0_broadleaf_trees',
+                'Broadleaf evergreen tropical tree':'a0_broaleaf_trees',
+                'Broadleaf evergreen temperate tree':'a0_broadleaf_trees',
+                'Broadleaf deciduous tropical tree':'a0_broadleaf_trees',
+                'Broadleaf deciduous temperate tree':'a0_broadleaf_trees',
+                'Broadleaf deciduous boreal tree':'a0_broadleaf_trees',
+                'Broadleaf evergreen temperate shrub':'a0_shrub',
+                'Broadleaf deciduous boreal shrub':'a0_shrub',
+                'Broadleaf deciduous temperate shrub':'a0_shrub',
+                'Broadleaf deciduous temperate shrub[moisture +deciduous]': (
+                    'a0_shrub'
+                ),
+                'Broadleaf deciduous temperate shrub[moisture stress only]': (
+                    'a0_shrub'
+                ),
+                'Arctic c3 grass':'a0_c3_grass',
+                'Cool c3 grass':'a0_c3_grass',
+                'Cool c3 grass [moisture + deciduous]':'a0_c3_grass',
+                'Cool c3 grass [moisture stress only]':'a0_c3_grass',
+                'Warm c4 grass [moisture + deciduous]':'a0_c4_grass',
+                'Warm c4 grass [moisture stress only]':'a0_c4_grass',
+                'Warm c4 grass':'a0_c4_grass',
+                'Crop':'a0_crop',
+                'Crop [moisture + deciduous]':'a0_crop',
+                'Crop [moisture stress only]':'a0_crop',
+                '(Spring temperate cereal)':'a0_crop',
+                '(Irrigated corn)':'a0_crop',
+                '(Soybean)':'a0_crop',
+                '(Corn)':'a0_crop'
+            }
+        elif optimization_type == 'ef':
+            positions_map = {
+                'Needleleaf evergreen temperate tree':'b_needleleaf_trees',
+                'Needleleaf evergreen boreal tree':'b_needleleaf_trees',
+                'Needleleaf deciduous boreal tree':'b_broadleaf_trees',
+                'Broadleaf evergreen tropical tree':'b_broaleaf_trees',
+                'Broadleaf evergreen temperate tree':'b_broadleaf_trees',
+                'Broadleaf deciduous tropical tree':'b_broadleaf_trees',
+                'Broadleaf deciduous temperate tree':'b_broadleaf_trees',
+                'Broadleaf deciduous boreal tree':'b_broadleaf_trees',
+                'Broadleaf evergreen temperate shrub':'b_shrub',
+                'Broadleaf deciduous boreal shrub':'b_shrub',
+                'Broadleaf deciduous temperate shrub':'b_shrub',
+                'Broadleaf deciduous temperate shrub[moisture +deciduous]': (
+                    'b_shrub'
+                ),
+                'Broadleaf deciduous temperate shrub[moisture stress only]': (
+                    'b_shrub'
+                ),
+                'Arctic c3 grass':'b_c3_grass',
+                'Cool c3 grass':'b_c3_grass',
+                'Cool c3 grass [moisture + deciduous]':'b_c3_grass',
+                'Cool c3 grass [moisture stress only]':'b_c3_grass',
+                'Warm c4 grass [moisture + deciduous]':'b_c4_grass',
+                'Warm c4 grass [moisture stress only]':'b_c4_grass',
+                'Warm c4 grass':'b_c4_grass',
+                'Crop':'b_crop',
+                'Crop [moisture + deciduous]':'b_crop',
+                'Crop [moisture stress only]':'b_crop',
+                '(Spring temperate cereal)':'b_crop',
+                '(Irrigated corn)':'b_crop',
+                '(Soybean)':'b_crop',
+                '(Corn)':'b_crop'
+            }
+        else:
+            raise Exception(
+                'optimization type must be either \'ef\'' +
+                'or \'pft\'!'
+            )
+        # get tile info
+        tile_info = pd.read_csv(tile_info_fname)
+        tile_info = tile_info.set_index('tile')
+        # get covariates
+        precip = nc.Dataset(precip_fname)
+        canopy_height = nc.Dataset(canopy_fname)
+        tiles = np.array(precip['tile'])
+        precip_vals = np.array(precip['vals'])
+        canopy_vals = np.array(canopy_height['vals'])
+        it_num_idx = it_num - 1
+        this_it_obj = objective['all'][it_num_idx][:]
+        best_part = np.argmin(this_it_obj)
+        g1_vals = np.zeros(len(tiles))
+        g1_df = pd.DataFrame(columns=tiles)
+        for t,ti in enumerate(tiles):
+            effective_g1 = 0
+            for p in range(4):
+                this_p = p + 1
+                this_perc = tile_info[
+                    'pft_{}_perc'.format(
+                        this_p
+                    )
+                ].loc[ti]*0.01
+                this_pft = tile_info[
+                    'pft_{}_name'.format(
+                        this_p
+                    )
+                ].loc[ti]
+                this_coef = positions[
+                    positions_map[
+                        this_pft
+                    ]
+                ]
+                this_coef = this_coef[it_num_idx][best_part]
+                if optimization_type == 'pft':
+                    effective_g1 += this_perc*this_coef
+                elif optimization_type == 'ef':
+                    b = positions[
+                        positions_map[
+                            this_pft
+                        ]
+                    ]
+                    b = b[it_num_idx][best_part]
+                    a0 = positions['a0_intercept'][it_num_idx][best_part]
+                    a1 = positions['a1_precip_coef'][it_num_idx][best_part]
+                    a2 = positions['a2_canopy_coef'][it_num_idx][best_part]
+                    this_precip = precip_vals[t]
+                    this_canopy = canopy_vals[t]
+                    this_val = b*(
+                        a0 +
+                        a1*this_precip +
+                        a2*this_canopy
+                    )
+                    effective_g1 += this_perc*this_val
+            g1_vals[t] = effective_g1
+        g1_vals[g1_vals < 0.5] = 0.5
+        g1_df.loc['g1'] = g1_vals
+        return g1_df
 
 
 

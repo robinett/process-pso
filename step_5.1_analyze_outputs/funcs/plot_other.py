@@ -7,6 +7,7 @@ from statsmodels.formula.api import ols
 from scipy.stats import gaussian_kde
 from matplotlib.colors import LinearSegmentedColormap
 import mpl_scatter_density
+import matplotlib as mpl
 
 class plot_other:
     def histogram(self,vals,save_dir,save_name,x_label='',y_label='',
@@ -113,7 +114,11 @@ class plot_other:
         plt.close(fig)
     def scatter(self,x,y,plots_dir,save_name,x_label,y_label,
                 best_fit_line=False,dot_size=1,one_to_one_line=False,
-                xlim=[np.nan],ylim=[np.nan]):
+                xlim=[np.nan],ylim=[np.nan],color=['none'],
+                quadrant_lines=False,cbarlim=[np.nan],
+                cmap='rainbow',x_log=False,y_log=False):
+        x = np.array(x)
+        y = np.array(y)
         # can't do best fit or one to one line if all nan
         x_nan_idx = np.where(np.isnan(x) == True)[0]
         num_x_nan = len(x_nan_idx)
@@ -124,7 +129,6 @@ class plot_other:
             best_fit_line = False
             one_to_one_line = False
         plt.figure()
-        plt.scatter(x,y,s=dot_size)
         plt.xlabel(x_label)
         plt.ylabel(y_label)
         if best_fit_line:
@@ -147,18 +151,18 @@ class plot_other:
             step = (max_x - min_x)/100
             line_x = np.arange(min_x,max_x,step)
             line_y = m*line_x + b
-            plt.plot(line_x,line_y,label='best fit line',c='k')
+            plt.plot(line_x,line_y,label='best fit line',c='k',zorder=-1)
             plt.annotate(
                 'r2 = {:.2f}'.format(r2),
                 xy=(0.05,0.95),xycoords='axes fraction'
             )
             plt.annotate(
                 'm = {:.2f}'.format(m),
-                xy=(0.85,0.90),xycoords='axes fraction'
+                xy=(0.85,0.05),xycoords='axes fraction'
             )
             plt.annotate(
                 'b = {:.2f}'.format(b),
-                xy=(0.85,0.95),xycoords='axes fraction'
+                xy=(0.85,0.1),xycoords='axes fraction'
             )
             plt.legend(loc='lower left')
         if one_to_one_line:
@@ -170,17 +174,44 @@ class plot_other:
             max_all = np.nanmax([max_x,max_y])
             step = (max_all - min_all)/100
             vals = np.arange(min_all,max_all,step)
-            plt.plot(vals,vals,label = 'one_to_one_line')
+            plt.plot(vals,vals,label = 'one_to_one_line',c='k',zorder=-1)
             plt.legend()
+        if quadrant_lines:
+            plt.axhline(y=0,c='gray',zorder=-1,linewidth=0.4)
+            plt.axvline(x=0,c='gray',zorder=-1,linewidth=0.4)
         if np.isnan(xlim[0]) == False:
             plt.xlim(xlim[0],xlim[1])
         if np.isnan(ylim[0]) == False:
             plt.ylim(ylim[0],ylim[1])
+        if color[0] == 'none':
+            plt.scatter(x,y,s=dot_size,c='#42bcf5')
+        else:
+            #nans_idx = np.where(np.isnan(color) == True)
+            #x_nans = x[nans_idx]
+            #y_nans = y[nans_idx]
+            #plt.scatter(x_nans,y_nans,s=dot_size/2,c='silver',alpha=0.5)
+            if np.isnan(cbarlim[0]) == True:
+                plt.scatter(
+                    x,y,s=dot_size*2,c=color,cmap=cmap,zorder=1
+                )
+            else:
+                plt.scatter(
+                    x,y,s=dot_size*2,c=color,cmap=cmap,
+                    vmin=cbarlim[0],vmax=cbarlim[1],
+                    zorder=1
+                )
+            plt.colorbar()
+        if x_log:
+            plt.xscale('log')
+        if y_log:
+            plt.yscale('log')
         plt.savefig(
             os.path.join(
                 plots_dir,
                 save_name
-            )
+            ),
+            dpi=350,
+            bbox_inches='tight'
         )
         plt.close()
     def iteration_plot(self,vals,vals_name,plots_dir,save_name):
@@ -197,20 +228,6 @@ class plot_other:
             )
         )
         plt.close()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
